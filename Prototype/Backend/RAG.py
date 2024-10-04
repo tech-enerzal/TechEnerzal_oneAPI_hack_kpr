@@ -226,7 +226,7 @@ def generate_stream(payload):
 
     # Log the extracted values
     logging.debug(f"Model: {model}, Temperature: {temperature}, Max Tokens: {max_tokens}, Context Length: {context_length}, Stream: {stream}")
-    logging.debug(f"Messages received:\n{json.dumps(messages, indent=2)}")
+    # logging.debug(f"Messages received:\n{json.dumps(messages, indent=2)}")
 
     # Validate messages
     if not messages or not isinstance(messages, list):
