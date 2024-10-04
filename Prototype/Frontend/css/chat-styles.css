@@ -1,0 +1,184 @@
+/* General Body Styles */
+html, body {
+    height: 100%;
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0; /* Light gray for body background */
+    overflow: hidden; /* Prevents body scrolling */
+}
+
+/* Navbar Styling */
+.navbar {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand {
+    font-size: 1.5rem;
+}
+
+.navbar-nav .nav-link {
+    font-size: 1.1rem;
+    transition: color 0.3s ease;
+}
+
+.navbar-nav .nav-link:hover {
+    color: #dc3545; /* Red color on hover */
+}
+
+/* Sidebar Styles */
+.sidebar {
+    height: 100vh;
+    border-right: 1px solid #dee2e6;
+    padding: 2rem 1rem;
+}
+
+.sidebar-item {
+    margin: 1rem 0;
+    padding: 1rem;
+    background-color: #ccc; /* Default background */
+    border-radius: 0.5rem;
+    text-align: center;
+}
+
+.recent-searches {
+    background-color: #f8d3e0; /* Light pink for recent searches */
+    padding: 10px;
+    border-radius: 10px;
+    overflow-y: auto;
+}
+
+/* Chat Bubble Styles */
+.chat-bubbles {
+    display: flex; /* Use flexbox for bubbles */
+    flex-direction: column; /* Stack bubbles vertically */
+    max-height: calc(100vh - 180px); /* Ensures bubbles don't take too much space */
+    overflow-y: auto;
+    padding: 20px; /* Add padding */
+    margin-top: 20px; /* Additional space above the chat bubbles */
+}
+
+.chat-bubble {
+    display: flex;
+    flex-direction: column;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin: 0.5rem; /* Adjust margin for better spacing */
+    width: 65%; /* Each bubble takes 30% of the width */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+    transition: transform 0.2s ease, box-shadow 0.2s ease; /* Smooth transition for hover effects */
+}
+
+.chat-bubble:hover {
+    transform: scale(1.01); /* Slightly enlarge bubble on hover */
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2); /* Darker shadow on hover */
+}
+
+/* User bubble light gray */
+.chat-bubble-user {
+    background-color: #d3d3d3; /* Light gray for user bubble */
+    align-self: flex-end; /* Align user messages to the right */
+}
+
+/* Assistant bubble light pink */
+.chat-bubble-assistant {
+    background-color: #ffccdd; /* Light pink for assistant bubble */
+    align-self: flex-start; /* Align assistant messages to the left */
+}
+
+.chat-bubble-user:hover, .chat-bubble-assistant:hover {
+    cursor: pointer; /* Show pointer cursor on hover */
+}
+
+/* Additional Styles for Proper Spacing */
+.chat-bubble-user p, .chat-bubble-assistant p {
+    margin: 0;
+}
+
+/* Chat Input Section */
+.chat-input {
+    border-top: 1px solid #ffccdd;
+    position: sticky;
+    bottom: 0;
+    margin-top: auto;
+}
+
+#fileUpload {
+    display: none; /* Hide the default file input */
+}
+
+/* Upload Button Styles */
+.btn-upload {
+    background-color: #dc3545; /* Same color as Send button */
+    color: #fff; /* White text color */
+    border: none; /* Remove default border */
+    padding: 5px 10px; /* Adjust padding */
+    border-radius: 0.25rem; /* Rounded corners */
+    display: flex;
+    align-items: center;
+    cursor: pointer; /* Change cursor to pointer */
+    position: relative; /* Required for absolute positioning of hover text */
+    font-size: 1.5rem; /* Adjust icon size */
+}
+
+/* Upload Icon Size */
+.btn-upload i {
+    font-size: 1.25rem; /* Adjust icon size */
+}
+
+/* Hover Text Styles */
+.btn-upload-text {
+    display: block;
+    position: absolute;
+    bottom: 100%; /* Position above the button */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #dc3545; /* Same color as Send button */
+    color: #fff; /* White text color */
+    padding: 3px 5px; /* Smaller padding */
+    border-radius: 0.25rem;
+    white-space: nowrap; /* Prevent text wrapping */
+    opacity: 0; /* Initially hidden */
+    visibility: hidden; /* Initially hidden */
+    transition: opacity 0.3s ease, visibility 0.3s ease; /* Smooth transition */
+    font-size: 0.75rem; /* Smaller text size */
+}
+
+/* Show Hover Text */
+.btn-upload:hover .btn-upload-text {
+    opacity: 1;
+    visibility: visible;
+}
+
+
+/* Send Button Styles */
+#sendButton {
+    transition: background-color 0.3s ease, transform 0.2s ease; /* Smooth transition for hover effects */
+}
+
+#sendButton:hover {
+    background-color: #e63946; /* Darker red on hover */
+    transform: scale(1.05); /* Slightly enlarge button on hover */
+}
+
+#sendButton:active {
+    background-color: #d62839; /* Even darker red when clicked */
+}
+
+/* Logo */
+.logo {
+    width: 200px; /* Adjust logo size */
+    height: 200px;
+}
+
+/* History Item Styles */
+.history-item {
+    margin-bottom: 10px;
+    padding: 8px;
+    border-radius: 5px;
+    background-color: #f1f1f1; /* Background for history items */
+}
+
+/* Features Section Styling */
+.features-section {
+    padding: 3rem 1rem;
+}

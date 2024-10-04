@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Enerzal Chat</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.5/font/bootstrap-icons.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="/css/chat-styles.css"> <!-- Link to external CSS file -->
+        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="/js/chat.js"></script>
+        
+    </head>
+    
+<body>
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+            <div class="container">
+                <a class="navbar-brand text-danger fw-bold" href="/index.html">ENERZAL</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                    <ul class="navbar-nav">
+                        <li class="nav-item"><a class="nav-link active" href="/pages/features.html">Features</a></li>
+                        <li class="nav-item"><a class="nav-link active" href="/pages/pricing.html">Pricing</a></li>
+                        <li class="nav-item"><a class="nav-link active" href="/pages/about.html">About</a></li>
+                        <li class="nav-item"><a class="nav-link active" href="/pages/contact.html">Contact</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container-fluid d-flex flex-column vh-100">
+        <div class="row flex-grow-1">
+            <div class="col-md-2 sidebar d-flex flex-column p-3">
+                <h5>Chat History</h5>
+                <div id="chatHistory" class="recent-searches flex-grow-1 overflow-auto"></div>
+            </div>
+
+            <div class="col-md-10 d-flex flex-column">
+                <div class="chat-bubbles flex-grow-1 overflow-auto p-4" id="chatBubbles">
+                    <!-- Logo -->
+                    <div id="logo" class="text-center mb-3">
+                        <img src="/assests/ENERZAL_LOGO.jpg" alt="Logo" class="logo">
+                    </div>
+
+                    <!-- Initial Chat Bubbles -->
+                    <div class="d-flex justify-content-center mb-3 initial-bubbles">
+                        <div class="chat-bubble chat-bubble-assistant shadow-sm text-center mx-2" data-message="Could you explain the company's leave policies?">
+                            <h5>Leave Policies</h5>
+                            <p>"Could you explain the company's leave policies?"</p>
+                        </div>
+                        <div class="chat-bubble chat-bubble-assistant shadow-sm text-center mx-2" data-message="What is the standard procedure when an employee encounters a technical issue?">
+                            <h5>Technical Issue Resolution</h5>
+                            <p>"What is the standard procedure when an employee encounters a technical issue?"</p>
+                        </div>
+                        <div class="chat-bubble chat-bubble-assistant shadow-sm text-center mx-2" data-message="How does the company celebrate major milestones?">
+                            <h5>Celebration of Milestones</h5>
+                            <p>"How does the company celebrate major milestones?"</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-input bg-light p-3">
+                    <div class="container">
+                        <div class="d-flex align-items-center position-relative">
+                            <!-- Upload Button -->
+                            <label for="fileUpload" class="btn btn-upload me-3">
+                                <i class="bi bi-upload"></i>
+                                <span class="btn-upload-text">Upload</span>
+                            </label>
+                            <input type="file" id="fileUpload" accept=".txt, .pdf, .docx" style="display: none;" />
+                            
+                            <!-- Text Input Field -->
+                            <input type="text" class="form-control me-3" placeholder="Ask Enerzal" id="userInput" />
+                            
+                            <!-- Send Button -->
+                            <button class="btn btn-danger" id="sendButton">Send</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
