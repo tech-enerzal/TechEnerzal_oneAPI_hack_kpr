@@ -1,0 +1,96 @@
+/* Basic styles for the body and HTML */
+html, body {
+    height: 100%;
+    margin: 0;
+    font-family: Arial, sans-serif;
+}
+
+/* Navbar styling */
+.navbar {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand {
+    font-size: 1.5rem;
+}
+
+.navbar-nav .nav-link {
+    font-size: 1.1rem;
+    transition: color 0.3s ease;
+}
+
+.navbar-nav .nav-link:hover {
+    color: #dc3545; /* Red color on hover */
+}
+
+/* Features section styling */
+.features-section {
+    padding: 3rem 1rem;
+}
+
+/* Enhanced heading styling */
+.features-section h1 {
+    font-size: 3rem; /* Increase font size */
+    font-weight: bold;
+    text-transform: uppercase;
+    background: linear-gradient(90deg, #010101, #050505); /* Gradient background */
+    -webkit-background-clip: text; /* For Webkit-based browsers */
+    background-clip: text; /* Standard background-clip */
+    color: transparent; /* Hide the text color, use gradient as text color */
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2); /* Subtle text shadow */
+    margin-bottom: 1rem; /* Add margin below */
+    padding: 0.5rem 0; /* Add padding for better spacing */
+}
+
+/* Paragraph styling */
+.features-section p {
+    font-size: 1.1rem;
+    color: #6c757d;
+}
+
+/* Features box styling */
+.features-box {
+    background-color:#f8d7da;  /* Light pink color */
+    border-radius: 0.5rem;
+    padding: 2rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.features-box:hover {
+    background-color:#f8c6cb; /* Slightly darker pink on hover */
+    transform: translateY(-5px); /* Lift the box up slightly */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Stronger shadow on hover */
+}
+
+/* Icon and text styling */
+.features-icon {
+    font-size: 3rem;
+    transition: color 0.3s ease;
+}
+
+.features-icon:hover {
+    color: #dc3545; /* Red color on hover */
+}
+
+.features-text {
+    margin: 1rem 0;
+    font-size: 1.2rem;
+    color: #343a40;
+    transition: color 0.3s ease;
+}
+
+.features-text:hover {
+    color: #dc3545; /* Red color on hover */
+}
+
+/* Footer styling */
+footer {
+    background-color: #f8f9fa;
+    padding: 1rem 0;
+}
+
+footer p {
+    margin: 0;
+    color: #6c757d;
+}
