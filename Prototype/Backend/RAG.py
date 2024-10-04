@@ -189,20 +189,13 @@ def generate_stream(payload):
     temperature = options.get('temperature', 0.8)
     max_tokens = options.get('num_predict', 4096)
     context_length = options.get('num_ctx', 8192)
-    stream = payload.get('stream', True)
+    stream = payload.get('stream', True)  # We'll handle streaming to the frontend separately
     logging.debug(f"Model: {model}, Temperature: {temperature}, Max Tokens: {max_tokens}, Stream: {stream}")
 
     # Process messages to get user question and chat history
     if not messages or not isinstance(messages, list):
         logging.error("Invalid messages format in payload.")
         raise ValueError('Invalid messages format')
-
-    # Extract the user's latest message
-    user_message = messages[-1].get('content', '')
-    logging.debug(f"User message: {user_message}")
-
-    # Build chat history (excluding the last message)
-    chat_history = messages[:-1]
 
     # Get employee_id from payload
     employee_id = payload.get('employee_id')
@@ -237,162 +230,101 @@ def generate_stream(payload):
             'num_ctx': context_length,
         },
         'tools': tools,
-        'stream': stream,
+        'stream': False,  # Do not stream from the assistant
         'keep_alive': 0
     }
 
     try:
-        # Make the API call to the LLM model
-        logging.info("Making API call to the LLM model.")
-        response = requests.post('http://localhost:11434/api/chat', json=model_payload, stream=stream)
-        response.raise_for_status()
-        logging.info("API call successful.")
+        while True:
+            # Make the API call to the LLM model
+            logging.info("Making API call to the LLM model.")
+            response = requests.post('http://localhost:11434/api/chat', json=model_payload)
+            response.raise_for_status()
+            logging.info("API call successful.")
 
-        # Process the assistant's response
-        if stream:
-            for line in response.iter_lines():
-                if line:
-                    assistant_response = json.loads(line.decode('utf-8'))
-
-                    # Handle function calls
-                    if 'message' in assistant_response:
-                        message = assistant_response['message']
-                        if 'tool_calls' in message:
-                            for tool_call in message['tool_calls']:
-                                function_name = tool_call['function']['name']
-                                arguments = tool_call['function']['arguments']
-
-                                if function_name == 'determine_database_requirements':
-                                    # The assistant provides 'database_required' and 'categories' in arguments
-                                    database_required = arguments.get('database_required')
-                                    categories = arguments.get('categories', [])
-
-                                    if database_required:
-                                        # If database is required and categories include 'hr_policy' or 'company_events'
-                                        if 'hr_policy' in categories or 'company_events' in categories:
-                                            # Proceed to search vector DB and generate response with context
-                                            # Steps are commented out for future implementation
-                                            """
-                                            logging.info("Database is required. Proceeding to search vector DB and generate response with context.")
-                                            k_full = 10  # Number of documents to retrieve
-                                            full_hr_candidates = faiss_Full_HR.similarity_search(user_message, k=k_full)
-                                            logging.debug(f"Retrieved {len(full_hr_candidates)} documents from full HR dataset.")
-
-                                            # Step 4: Query the QA of the top 2 selected Sections from Full HR
-                                            top_sections = full_hr_candidates[:2]
-                                            section_names = [doc.metadata.get('section_name') for doc in top_sections]
-                                            logging.debug(f"Top section names: {section_names}")
-
-                                            # Retrieve related FAQs from faiss_QA_HR
-                                            qa_candidates = []
-                                            for section_name in section_names:
-                                                logging.debug(f"Querying FAQs for section: {section_name}")
-                                                k_qa = 10
-                                                qa_results = faiss_QA_HR.similarity_search(
-                                                    user_message,
-                                                    k=k_qa,
-                                                    filter={'section_name': section_name}
-                                                )
-                                                qa_candidates.extend(qa_results)
-                                                logging.debug(f"Retrieved {len(qa_results)} FAQs for section {section_name}")
-
-                                            # Re-ranking the QA passages
-                                            logging.info("Re-ranking the QA passages.")
-                                            qa_passages = [{
-                                                'id': doc.metadata.get('ids', ''),
-                                                'text': doc.page_content,
-                                                'meta': doc.metadata
-                                            } for doc in qa_candidates]
-                                            logging.debug(f"Total QA passages for re-ranking: {len(qa_passages)}")
-
-                                            rerank_request = RerankRequest(query=user_message, passages=qa_passages)
-                                            reranked_qa_results = ranker.rerank(rerank_request)
-                                            logging.debug("Reranked QA results obtained.")
-
-                                            # Select top FAQs
-                                            top_faqs = reranked_qa_results[:3]
-                                            logging.info(f"Selected top {len(top_faqs)} FAQs.")
-
-                                            # Prepare context
-                                            context_sections = '\n\n'.join([doc.page_content for doc in top_sections])
-                                            context_faqs = '\n\n'.join([faq['text'] for faq in top_faqs])
-
-                                            # context = f"Sections:\n{context_sections}\n\nFAQs:\n{context_faqs}"
-                                            context = f"Sections:\n{context_sections}\n"
-
-                                            logging.debug("Context prepared.")
-
-                                            # Insert system message with context before the last user message
-                                            messages.insert(-1, {
-                                                'role': 'system',
-                                                'content': f'Using the provided context from the database for Tech Enerzal to answer the user query.\nContext="{context}"'
-                                            })
-                                            logging.debug("Inserted system message with context into messages.")
-                                            """
-
-                                            # For now, we proceed without adding context
-
-                                    # Prepare a message to send back to the assistant
-                                    content = json.dumps({
-                                        'database_required': database_required,
-                                        'categories': categories
-                                    })
-                                    messages.append({
-                                        'role': 'function',
-                                        'name': 'determine_database_requirements',
-                                        'content': content
-                                    })
-
-                                elif function_name == 'get_employee_data':
-                                    result = get_employee_data_func(arguments, employee_id)
-                                    messages.append({
-                                        'role': 'function',
-                                        'name': 'get_employee_data',
-                                        'content': json.dumps(result)
-                                    })
-
-                                elif function_name == 'get_hr_policy':
-                                    result = get_hr_policy_func(arguments)
-                                    messages.append({
-                                        'role': 'function',
-                                        'name': 'get_hr_policy',
-                                        'content': json.dumps(result)
-                                    })
-
-                                elif function_name == 'get_company_events':
-                                    result = get_company_events_func(arguments)
-                                    messages.append({
-                                        'role': 'function',
-                                        'name': 'get_company_events',
-                                        'content': json.dumps(result)
-                                    })
-
-                                else:
-                                    # Handle unknown functions
-                                    logging.warning(f"Unknown function called: {function_name}")
-
-                            # Make another API call with updated messages
-                            model_payload['messages'] = messages
-                            response = requests.post('http://localhost:11434/api/chat', json=model_payload, stream=stream)
-                            response.raise_for_status()
-                            continue  # Process the new response
-
-                        else:
-                            # No function calls, yield the assistant's message
-                            assistant_reply = message.get('content', '').strip()
-                            yield json.dumps({'content': assistant_reply})
-
-                    else:
-                        # Handle other responses
-                        pass
-
-        else:
             assistant_response = response.json()
-            # Process the assistant's response similarly
+
+            # Process the assistant's response
             if 'message' in assistant_response:
                 message = assistant_response['message']
-                assistant_reply = message.get('content', '').strip()
-                yield json.dumps({'content': assistant_reply})
+
+                if 'tool_calls' in message:
+                    # Handle function calls internally
+                    for tool_call in message['tool_calls']:
+                        function_name = tool_call['function']['name']
+                        arguments = tool_call['function']['arguments']
+
+                        logging.info(f"Assistant called function: {function_name} with arguments: {arguments}")
+
+                        if function_name == 'determine_database_requirements':
+                            # The assistant provides 'database_required' and 'categories' in arguments
+                            database_required = arguments.get('database_required')
+                            categories = arguments.get('categories', [])
+
+                            # Prepare a message to send back to the assistant
+                            content = json.dumps({
+                                'database_required': database_required,
+                                'categories': categories
+                            })
+                            messages.append({
+                                'role': 'function',
+                                'name': 'determine_database_requirements',
+                                'content': content
+                            })
+
+                        elif function_name == 'get_employee_data':
+                            result = get_employee_data_func(arguments, employee_id)
+                            messages.append({
+                                'role': 'function',
+                                'name': 'get_employee_data',
+                                'content': json.dumps(result)
+                            })
+
+                        elif function_name == 'get_hr_policy':
+                            result = get_hr_policy_func(arguments)
+                            messages.append({
+                                'role': 'function',
+                                'name': 'get_hr_policy',
+                                'content': json.dumps(result)
+                            })
+
+                        elif function_name == 'get_company_events':
+                            result = get_company_events_func(arguments)
+                            messages.append({
+                                'role': 'function',
+                                'name': 'get_company_events',
+                                'content': json.dumps(result)
+                            })
+
+                        else:
+                            # Handle unknown functions
+                            logging.warning(f"Unknown function called: {function_name}")
+                            messages.append({
+                                'role': 'function',
+                                'name': function_name,
+                                'content': f"Function {function_name} is not recognized."
+                            })
+
+                    # Update model_payload with new messages
+                    model_payload['messages'] = messages
+                    continue  # Make another API call
+
+                else:
+                    # No function calls, assistant has provided the final response
+                    assistant_reply = message.get('content', '').strip()
+                    if stream:
+                        # Stream the response to the front-end
+                        for chunk in assistant_reply:
+                            yield json.dumps({'content': chunk})
+                    else:
+                        # Send the full response at once
+                        yield json.dumps({'content': assistant_reply})
+                    break  # Exit the loop
+
+            else:
+                # Handle other responses
+                logging.warning("No 'message' in assistant_response")
+                break  # Exit the loop
 
     except Exception as e:
         logging.exception("Error in generate_stream")
