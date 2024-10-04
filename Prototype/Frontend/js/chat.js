@@ -127,8 +127,13 @@ document.addEventListener('DOMContentLoaded', function() {
             input.value = '';
             input.disabled = true; // Disable input while waiting for response
             chatBubbles.scrollTop = chatBubbles.scrollHeight; // Scroll to bottom
+
+
             // **Retrieve the token from localStorage**
             const token = localStorage.getItem('token');
+
+            console.log('Retrieved token:', token);
+
 
             if (!token) {
                 console.error('No token found. Please log in.');
@@ -136,6 +141,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 input.disabled = false; // Re-enable input
                 return;
             }
+
+                    // Log the headers
+        const headers = {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        };
+        console.log('Request headers:', headers); // Debugging
 
             try {
                 // Fetch the response from the Flask backend
@@ -148,7 +160,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     body: JSON.stringify({
                         messages: conversationHistory // Send conversation history only
                     })
-                });
+                });               
 
                 if (!response.ok) {
                     if (response.status === 401) {
