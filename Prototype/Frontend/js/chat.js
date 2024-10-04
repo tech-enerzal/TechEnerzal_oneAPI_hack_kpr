@@ -1,12 +1,25 @@
-document.addEventListener('DOMContentLoaded', function() {
-    const chatBubbles = document.querySelector('.chat-bubbles');
-    const initialBubbles = document.querySelector('.initial-bubbles');
-    const sendButton = document.getElementById('sendButton');
-    const input = document.getElementById('userInput');
-    const logo = document.getElementById('logo');
-    const fileUpload = document.getElementById('fileUpload'); // For file upload
+/**
+ * @fileoverview Handles chat interface interactions, including sending messages,
+ * managing conversation history, handling file uploads, and communicating with
+ * the backend API.
+ * @version 1.0
+ */
 
-    // Handle click on initial chat bubbles
+document.addEventListener('DOMContentLoaded', function() {
+    /**
+     * DOM Elements
+     */
+    const chatBubbles = document.querySelector('.chat-bubbles'); // Container for chat messages
+    const initialBubbles = document.querySelector('.initial-bubbles'); // Initial chat bubbles
+    const sendButton = document.getElementById('sendButton'); // Send button element
+    const input = document.getElementById('userInput'); // User input field
+    const logo = document.getElementById('logo'); // Logo element
+    const fileUpload = document.getElementById('fileUpload'); // File upload input
+
+    /**
+     * Adds click event listeners to each initial chat bubble.
+     * When a bubble is clicked, its associated message is sent.
+     */
     document.querySelectorAll('.initial-bubbles .chat-bubble').forEach(bubble => {
         bubble.addEventListener('click', function() {
             const message = this.getAttribute('data-message');
@@ -14,7 +27,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Handle send button click
+    /**
+     * Adds a click event listener to the send button.
+     * When clicked, it sends the message from the input field if not empty.
+     */
     sendButton.addEventListener('click', function() {
         const message = input.value.trim();
         if (message !== '') {
@@ -22,7 +38,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Handle ENTER key press
+    /**
+     * Adds a keydown event listener to the input field.
+     * When the ENTER key is pressed, it sends the message if not empty.
+     * @param {KeyboardEvent} event - The keyboard event triggered by the user.
+     */
     input.addEventListener('keydown', function(event) {
         if (event.key === 'Enter') {
             event.preventDefault(); // Prevent default new line in textarea
@@ -34,46 +54,56 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     let conversationHistory = []; // Array to hold the chat history
+
+    /**
+     * Initial system message defining the assistant's role and guidelines.
+     * Utilizes Markdown for response formatting.
+     * @type {string}
+     */
+    const initialSystemMessage = `
+    You are Enerzal, a friendly and intelligent chatbot developed by Tech Enerzal. Your primary role is to assist employees of Tech Enerzal by providing helpful, polite, and accurate information. You should always maintain a friendly and approachable tone while ensuring your responses are clear and informative. Your purpose is to assist with the following:
+
+    1. **HR-Related Queries:** Help employees with questions regarding company policies, leave management, employee benefits, payroll, and other HR-related topics. Be empathetic and supportive, especially for sensitive topics like leave or benefits.
+
+    2. **IT Support:** Provide guidance on common IT issues employees may encounter, such as troubleshooting technical problems, resetting passwords, or navigating company software. Be patient and provide step-by-step instructions for resolving technical issues.
+
+    3. **Company Events & Updates:** Keep employees informed about upcoming company events, milestones, and internal updates. Share details about events in a friendly, enthusiastic tone to keep the company culture vibrant and engaging.
+
+    4. **Document Summarization and Querying:** Enerzal also helps employees by summarizing documents (PDF, DOCX, TXT) and answering queries based on the content of uploaded documents. For document summaries, be concise and informative, extracting the key points while maintaining clarity. When answering queries, provide clear and accurate answers based on the document content, making sure to offer further assistance if needed.
+
+    Guidelines to follow for every response:
+    - Always maintain a positive and friendly tone.
     
- // Add the initial system message
- const initialSystemMessage = `
- You are Enerzal, a friendly and intelligent chatbot developed by Tech Enerzal. Your primary role is to assist employees of Tech Enerzal by providing helpful, polite, and accurate information. You should always maintain a friendly and approachable tone while ensuring your responses are clear and informative. Your purpose is to assist with the following:
+    - Offer help proactively by suggesting next steps or additional resources.
+    - Be concise but detailed enough to ensure the employee gets all the information they need.
+    - When responding to questions or queries, prioritize clarity and accuracy.
+    - If a question falls outside of your scope, politely guide the user to the appropriate department or suggest alternative ways they can find help.
+    - Always be empathetic and understanding, especially when dealing with sensitive HR or IT issues.
+    
+    Remember, your goal is to make every employee interaction positive and helpful, ensuring that they feel supported by Tech Enerzal.
+    `
+    // Use Markdown when generating responses
 
-1. **HR-Related Queries:** Help employees with questions regarding company policies, leave management, employee benefits, payroll, and other HR-related topics. Be empathetic and supportive, especially for sensitive topics like leave or benefits.
+    // Add the system message to the conversation history
+    conversationHistory.push({ role: "system", content: initialSystemMessage });
 
-2. **IT Support:** Provide guidance on common IT issues employees may encounter, such as troubleshooting technical problems, resetting passwords, or navigating company software. Be patient and provide step-by-step instructions for resolving technical issues.
-
-3. **Company Events & Updates:** Keep employees informed about upcoming company events, milestones, and internal updates. Share details about events in a friendly, enthusiastic tone to keep the company culture vibrant and engaging.
-
-4. **Document Summarization and Querying:** Enerzal also helps employees by summarizing documents (PDF, DOCX, TXT) and answering queries based on the content of uploaded documents. For document summaries, be concise and informative, extracting the key points while maintaining clarity. When answering queries, provide clear and accurate answers based on the document content, making sure to offer further assistance if needed.
-
-Guidelines to follow for every response:
-- Always maintain a positive and friendly tone.
-
-- Offer help proactively by suggesting next steps or additional resources.
-- Be concise but detailed enough to ensure the employee gets all the information they need.
-- When responding to questions or queries, prioritize clarity and accuracy.
-- If a question falls outside of your scope, politely guide the user to the appropriate department or suggest alternative ways they can find help.
-- Always be empathetic and understanding, especially when dealing with sensitive HR or IT issues.
-
-Remember, your goal is to make every employee interaction positive and helpful, ensuring that they feel supported by Tech Enerzal.
-`
-// #- Use Markdown when generating responses
-
- // Add the system message to the conversation history
- conversationHistory.push({ role: "system", content: initialSystemMessage });
-
- // Function to prune conversation history to last 3 user/assistant interactions, excluding the system message
-function pruneConversationHistory() {
-    // Exclude the initial system message when pruning
-    if (conversationHistory.length > 4) { // 1 system message + last 3 entries
-        conversationHistory = [conversationHistory[0], ...conversationHistory.slice(-3)];
+    /**
+     * Prunes the conversation history to retain only the system message and the last three user/assistant interactions.
+     */
+    function pruneConversationHistory() {
+        // Exclude the initial system message when pruning
+        if (conversationHistory.length > 4) { // 1 system message + last 3 entries
+            conversationHistory = [conversationHistory[0], ...conversationHistory.slice(-3)];
+        }
     }
-}
 
+    /**
+     * Sends a message from the user to the assistant and handles the response.
+     * @param {string} message - The message input by the user.
+     */
     async function sendMessage(message) {
         if (message) {
-            // Remove initial bubbles and logo
+            // Remove initial bubbles and logo after the first message is sent
             if (initialBubbles) {
                 initialBubbles.remove();
             }
@@ -93,7 +123,7 @@ function pruneConversationHistory() {
             // Prune conversation history to retain only last 3 messages plus system prompt
             pruneConversationHistory();
 
-            // Clear input and disable it
+            // Clear input and disable it while waiting for response
             input.value = '';
             input.disabled = true; // Disable input while waiting for response
             chatBubbles.scrollTop = chatBubbles.scrollHeight; // Scroll to bottom
@@ -170,7 +200,9 @@ function pruneConversationHistory() {
         }
     }
 
-    // Handle file upload
+    /**
+     * Handles file uploads to allow users to send documents to the assistant.
+     */
     fileUpload.addEventListener('change', async function(event) {
         const file = event.target.files[0];
         if (file) {
