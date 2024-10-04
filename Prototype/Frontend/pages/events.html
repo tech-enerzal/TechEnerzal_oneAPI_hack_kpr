@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Company Events</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            text-align: center;
+            padding: 20px;
+            background-color: #6200ea;
+            color: #fff;
+            margin: 0;
+        }
+
+        .event-container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 10px;
+            background-color: #fff;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+
+        .event {
+            padding: 20px;
+            margin: 20px 0;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .event:last-child {
+            border-bottom: none;
+        }
+
+        h2 {
+            color: #6200ea;
+        }
+
+        .event-date {
+            color: #555;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+
+        a {
+            display: inline-block;
+            background-color: #6200ea;
+            color: #fff;
+            padding: 10px 15px;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+
+        a:hover {
+            background-color: #3700b3;
+        }
+
+        .search-bar {
+            width: 80%;
+            padding: 10px;
+            font-size: 16px;
+            margin: 20px auto;
+            display: block;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Upcoming Company Events</h1>
+
+<input type="text" id="searchInput" class="search-bar" onkeyup="searchEvents()" placeholder="Search for events by title...">
+
+<div class="event-container" id="eventContainer">
+
+    <div class="event">
+        <h2>Annual Tech Conference</h2>
+        <p class="event-date">Date: October 20, 2024</p>
+        <p>Join us for our annual tech conference where industry leaders will share insights on the latest trends in technology and innovation.</p>
+        <img src="https://example.com/image1.jpg" alt="Tech Conference">
+        <a href="https://example.com/register1">Register Here</a>
+    </div>
+
+    <div class="event">
+        <h2>Employee Wellness Week</h2>
+        <p class="event-date">Date: November 1-7, 2024</p>
+        <p>This week is dedicated to promoting health and wellness among our employees with various activities like yoga, mindfulness, and health checkups.</p>
+        <img src="https://example.com/image2.jpg" alt="Wellness Week">
+        <a href="https://example.com/register2">Register Here</a>
+    </div>
+
+    <div class="event">
+        <h2>Cybersecurity Awareness Workshop</h2>
+        <p class="event-date">Date: December 5, 2024</p>
+        <p>This workshop will cover the basics of cybersecurity and how you can protect yourself and your company from online threats.</p>
+        <img src="https://example.com/image3.jpg" alt="Cybersecurity Workshop">
+        <a href="https://example.com/register3">Register Here</a>
+    </div>
+
+    <div class="event">
+        <h2>Holiday Charity Gala</h2>
+        <p class="event-date">Date: December 18, 2024</p>
+        <p>Celebrate the holiday season by joining us for a charity gala where proceeds will be donated to local communities in need.</p>
+        <img src="https://example.com/image4.jpg" alt="Holiday Charity Gala">
+        <a href="https://example.com/register4">Register Here</a>
+    </div>
+
+    <div class="event">
+        <h2>New Year Kickoff Party</h2>
+        <p class="event-date">Date: January 5, 2025</p>
+        <p>Ring in the new year with our company's kickoff party where we celebrate our achievements and set new goals for the upcoming year.</p>
+        <img src="https://example.com/image5.jpg" alt="New Year Party">
+        <a href="https://example.com/register5">Register Here</a>
+    </div>
+
+</div>
+
+<script>
+    // Search filter function
+    function searchEvents() {
+        let input = document.getElementById('searchInput');
+        let filter = input.value.toUpperCase();
+        let eventContainer = document.getElementById('eventContainer');
+        let events = eventContainer.getElementsByClassName('event');
+
+        for (let i = 0; i < events.length; i++) {
+            let h2 = events[i].getElementsByTagName('h2')[0];
+            let title = h2.textContent || h2.innerText;
+            if (title.toUpperCase().indexOf(filter) > -1) {
+                events[i].style.display = "";
+            } else {
+                events[i].style.display = "none";
+            }
+        }
+    }
+</script>
+
+</body>
+</html>

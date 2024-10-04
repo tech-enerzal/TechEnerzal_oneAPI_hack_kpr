@@ -1,0 +1,37 @@
+[
+    {
+        "title": "Annual Tech Conference",
+        "date": "October 20, 2024",
+        "description": "Join us for our annual tech conference where industry leaders will share insights on the latest trends in technology and innovation.",
+        "img_url": "https://example.com/image1.jpg",
+        "event_url": "https://example.com/register1"
+    },
+    {
+        "title": "Employee Wellness Week",
+        "date": "November 1-7, 2024",
+        "description": "This week is dedicated to promoting health and wellness among our employees with various activities like yoga, mindfulness, and health checkups.",
+        "img_url": "https://example.com/image2.jpg",
+        "event_url": "https://example.com/register2"
+    },
+    {
+        "title": "Cybersecurity Awareness Workshop",
+        "date": "December 5, 2024",
+        "description": "This workshop will cover the basics of cybersecurity and how you can protect yourself and your company from online threats.",
+        "img_url": "https://example.com/image3.jpg",
+        "event_url": "https://example.com/register3"
+    },
+    {
+        "title": "Holiday Charity Gala",
+        "date": "December 18, 2024",
+        "description": "Celebrate the holiday season by joining us for a charity gala where proceeds will be donated to local communities in need.",
+        "img_url": "https://example.com/image4.jpg",
+        "event_url": "https://example.com/register4"
+    },
+    {
+        "title": "New Year Kickoff Party",
+        "date": "January 5, 2025",
+        "description": "Ring in the new year with our company's kickoff party where we celebrate our achievements and set new goals for the upcoming year.",
+        "img_url": "https://example.com/image5.jpg",
+        "event_url": "https://example.com/register5"
+    }
+]
