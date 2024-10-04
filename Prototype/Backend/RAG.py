@@ -265,6 +265,10 @@ def generate_stream(payload):
                         function_name = tool_call['function']['name']
                         arguments = tool_call['function']['arguments']
 
+                        # **Add this check to parse arguments if they are a string**
+                        if isinstance(arguments, str):
+                            arguments = json.loads(arguments)
+
                         logging.info(f"Assistant called function: {function_name} with arguments: {arguments}")
 
                         if function_name == 'determine_database_requirements':
