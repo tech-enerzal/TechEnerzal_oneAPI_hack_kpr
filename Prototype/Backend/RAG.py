@@ -21,12 +21,12 @@ warnings.filterwarnings("ignore")
 # Initialize logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Initialize embedding function (for future use)
+# Initialize embedding function
 logging.debug("Initializing embedding function...")
 embedding_function = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
 logging.info("Embedding function initialized.")
 
-# Load FAISS vector stores (for future use)
+# Load FAISS vector stores
 logging.debug("Loading FAISS vector stores...")
 faiss_Full_HR = FAISS.load_local(
     "Prototype/Backend/Database/HR/Vector/Full_HR",
@@ -94,18 +94,29 @@ def get_hr_policy_func(arguments):
     if not policy_name:
         return "Please specify the HR policy you want to retrieve."
 
-    # Implement logic to fetch HR policy from the database
-    # For demonstration, return a sample policy
-    return f"Details of HR Policy: {policy_name}"
+    # Query the vector database for the policy
+    try:
+        logging.info(f"Searching for HR policy: {policy_name}")
+        # Perform similarity search using FAISS vector store
+        k = 5  # Number of top results to retrieve
+        search_results = faiss_Full_HR.similarity_search(policy_name, k=k)
+        logging.debug(f"Retrieved {len(search_results)} documents from vector store.")
+
+        if not search_results:
+            return f"No HR policy found matching '{policy_name}'."
+
+        # Combine the contents of the top search results
+        policy_content = "\n\n".join([doc.page_content for doc in search_results])
+
+        return policy_content
+
+    except Exception as e:
+        logging.exception("Error querying the vector database for HR policy.")
+        return f"An error occurred while retrieving the HR policy: {str(e)}"
 
 def get_company_events_func(arguments):
-    event_name = arguments.get('event_name')
-    if not event_name:
-        return "Please specify the company event you want to know about."
-
-    # Implement logic to fetch company event from the database
-    # For demonstration, return a sample event
-    return f"Details of Company Event: {event_name}"
+    # For now, keep this function as pass
+    pass
 
 # Define the function tools
 determine_database_requirements = {
@@ -152,13 +163,13 @@ get_employee_data = {
 
 get_hr_policy = {
     "name": "get_hr_policy",
-    "description": "Fetch HR policy information from the database.",
+    "description": "Fetch HR policy information by querying the vector database.",
     "parameters": {
         "type": "object",
         "properties": {
             "policy_name": {
                 "type": "string",
-                "description": "The name of the HR policy to retrieve."
+                "description": "The name or topic of the HR policy to retrieve."
             }
         },
         "required": ["policy_name"]
@@ -289,11 +300,11 @@ def generate_stream(payload):
                             })
 
                         elif function_name == 'get_company_events':
-                            result = get_company_events_func(arguments)
+                            # Keep this function as pass; no data will be provided
                             messages.append({
                                 'role': 'function',
                                 'name': 'get_company_events',
-                                'content': json.dumps(result)
+                                'content': "No data available for company events."
                             })
 
                         else:
