@@ -1,0 +1,16 @@
+Flask
+flask-cors
+requests
+PyPDF2
+python-docx
+Werkzeug
+bcrypt
+pyotp
+qrcode
+flask-jwt-extended
+pymongo
+dnspython
+langchain-community
+flashrank  # Adjust if it's a private or custom package
+sentence-transformers
+faiss-cpu  # Use faiss-gpu if you need GPU support
