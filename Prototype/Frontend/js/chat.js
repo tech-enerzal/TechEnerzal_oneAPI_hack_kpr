@@ -127,13 +127,23 @@ document.addEventListener('DOMContentLoaded', function() {
             input.value = '';
             input.disabled = true; // Disable input while waiting for response
             chatBubbles.scrollTop = chatBubbles.scrollHeight; // Scroll to bottom
+            // **Retrieve the token from localStorage**
+            const token = localStorage.getItem('token');
+
+            if (!token) {
+                console.error('No token found. Please log in.');
+                // Optionally, redirect to login page or display a message to the user
+                input.disabled = false; // Re-enable input
+                return;
+            }
 
             try {
                 // Fetch the response from the Flask backend
                 const response = await fetch("http://localhost:5000/api/chat", {
                     method: "POST",
                     headers: {
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}` // Include the JWT token here
                     },
                     body: JSON.stringify({
                         messages: conversationHistory // Send conversation history only
@@ -141,6 +151,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
 
                 if (!response.ok) {
+                    if (response.status === 401) {
+                        console.error('Unauthorized. Token may be expired or invalid.');
+                        // Optionally, redirect to login page or prompt re-authentication
+                    }
                     throw new Error(`HTTP error! Status: ${response.status}`);
                 }
 

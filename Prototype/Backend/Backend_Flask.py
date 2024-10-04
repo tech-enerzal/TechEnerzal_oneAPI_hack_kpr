@@ -25,7 +25,7 @@ import dns  # required for connecting with SRV
 import RAG
 
 app = Flask(__name__)
-CORS(app)
+CORS(app,supports_credentials=True)
 
 # MongoDB Atlas connection string
 atlas_connection_string = "mongodb+srv://techenerzal:Chatbot%408188@cluster0.najcz.mongodb.net/?retryWrites=true&w=majority"
