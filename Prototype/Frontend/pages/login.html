@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Register form</title>
+
+    <!--Boxicons CDN-->
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/login-style.css">
+</head>
+
+<body>
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top">
+            <div class="container">
+                <a class="navbar-brand text-danger fw-bold" href="/index.html">ENERZAL</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                    <ul class="navbar-nav">
+                        <li class="nav-item"><a class="nav-link active" href="/pages/features.html">Features</a></li>
+                        <li class="nav-item"><a class="nav-link active" href="/pages/pricing.html">Pricing</a></li>
+                        <li class="nav-item"><a class="nav-link active" href="/pages/about.html">About</a></li>
+                        <li class="nav-item"><a class="nav-link active" href="/pages/contact.html">Contact</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container" style="padding-top: 70px;">
+        <div class="wrapper">
+            <span class="rotate-bg"></span>
+            <span class="rotate-bg2"></span>
+
+            <div class="form-box login">
+                <h2 class="title animation" style="--i:0; --j:21">Login</h2>
+                <form id="login-form">
+                    <div class="input-box animation" style="--i:1; --j:22">
+                        <input type="text" id="email" required>
+                        <label>Username</label>
+                        <i class='bx bxs-user'></i>
+                    </div>
+
+                    <div class="input-box animation" style="--i:2; --j:23">
+                        <input type="password" id="password" required>
+                        <label>Password</label>
+                        <i class='bx bxs-lock-alt'></i>
+                    </div>
+
+                    <!-- New TOTP input field -->
+                    <div class="input-box animation" style="--i:3; --j:24">
+                        <input type="text" id="totp" required>
+                        <label>TOTP Code</label>
+                        <i class='bx bxs-lock-alt'></i>
+                    </div>
+
+                    <button type="submit" class="btn btn-danger w-100 animation" style="--i:3; --j:24">LOG IN</button>
+                    <div class="linkTxt animation" style="--i:5; --j:25">
+                        <p>Don't have an account? <a href="#" class="register-link">Sign Up</a></p>
+                    </div>
+                </form>
+            </div>
+
+            <div class="info-text login">
+                <h2 class="animation" style="--i:0; --j:20">Welcome Back!</h2>
+                <p class="animation" style="--i:1; --j:21">Your Personal AI Assistant</p>
+            </div>
+
+            <div class="form-box register">
+                <h2 class="title animation" style="--i:17; --j:0">Sign Up</h2>
+                <form id="signup-form">
+                    <div class="input-box animation" style="--i:18; --j:1">
+                        <input type="text" id="signup-email" required>
+                        <label>Email</label>
+                        <i class='bx bxs-user'></i>
+                    </div>
+
+                    <div class="input-box animation" style="--i:19; --j:2">
+                        <input type="password" id="signup-password" required>
+                        <label>Password</label>
+                        <i class='bx bxs-lock-alt'></i>
+                    </div>
+
+                    <button type="submit" class="btn btn-danger w-100 animation" style="--i:3; --j:24">Sign Up</button>
+                    <div class="linkTxt animation" style="--i:22; --j:5">
+                        <p>Already have an account? <a href="#" class="login-link">Login</a></p>
+                    </div>
+                </form>
+            </div>
+
+             <!-- QR Code image element -->
+              <div class="qr-code-container" style="text-align: center; margin-top: 20px;">
+                <img id="qr-code" style="display:none; width: 200px; height: 200px;" alt="Scan QR Code for TOTP">
+                </div>
+                </div>
+
+            <div class="info-text register">
+                <h2 class="animation" style="--i:17; --j:0;">Welcome Back!</h2>
+                <p class="animation" style="--i:18; --j:1;">Your Personal AI Assistant</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/login.js"></script>
+</body>
+</html>
