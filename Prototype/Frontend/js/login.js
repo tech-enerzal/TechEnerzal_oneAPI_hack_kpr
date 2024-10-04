@@ -51,45 +51,42 @@ const loginForm = document.getElementById('login-form');
  * handles the response by storing the token and redirecting on success, or alerting the user on failure.
  * @param {Event} e - The form submission event.
  */
-loginForm.onsubmit = async (e) => {
-    e.preventDefault(); // Prevent the default form submission behavior
+loginForm.addEventListener('submit', async function(event) {
+    event.preventDefault();
 
-    // Retrieve user input values from the form fields
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    const totp = document.getElementById('totp').value;
-
-    // Construct the data object to be sent in the POST request
-    const data = { email, password, token: totp };
+    const email = emailInput.value.trim();
+    const password = passwordInput.value.trim();
+    const totp = totpInput.value.trim();
 
     try {
-        // Send a POST request to the login API endpoint with the user credentials
         const response = await fetch('http://localhost:5000/api/auth/login', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(data) // Convert the data object to a JSON string
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email, password: password, token: totp })
         });
 
-        // Parse the JSON response from the server
-        const result = await response.json();
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.msg || `HTTP error! Status: ${response.status}`);
+        }
 
-        if (response.ok) {
-            // If the response is successful, store the received token in localStorage
-            localStorage.setItem('token', result.token);
-            // Redirect the user to the chat page after successful login
+        const data = await response.json();
+        if (data.token) {
+            // Store the token in localStorage
+            localStorage.setItem('token', data.token);
+            console.log('Login successful. Token stored.');
+
+            // Optionally redirect to the chat page or show the chat interface
             window.location.href = '/pages/chat.html';
         } else {
-            // If the response is not successful, alert the user with the received message or a default message
-            alert(result.msg || 'Login failed.');
+            console.error('Login failed:', data.msg);
+            alert('Login failed: ' + data.msg);
         }
     } catch (error) {
-        // Log any errors to the console and alert the user of the failure
-        console.error('Error:', error);
-        alert('Login failed.');
+        console.error('Login error:', error);
+        alert('Login error: ' + error.message);
     }
-};
+});
 
 /**
  * Selects the signup form element by its ID.
