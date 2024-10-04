@@ -14,9 +14,11 @@ import bcrypt
 import pyotp
 import qrcode
 from io import BytesIO
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import (
+    JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt
+)
 import pymongo
-from pymongo import MongoClient
+from pymongo import MongoClient, ASCENDING
 import dns  # required for connecting with SRV
 
 # Import the RAG module
@@ -34,11 +36,14 @@ client = MongoClient(atlas_connection_string)
 # Access your database
 db = client["KPR_Business_chatbot"]
 
-# Create or access a collection
+# Create or access collections
 users = db["Employee_Credentials"]
+users.create_index([("email", ASCENDING)], unique=True)
+employees = db["Employee_Dashboard"]
 
 # JWT Configuration
 app.config['JWT_SECRET_KEY'] = 'Enerzal8188'
+app.config['JWT_ALGORITHM'] = 'HS256'
 jwt = JWTManager(app)
 
 # Initialize logging
@@ -120,16 +125,12 @@ def stream_response(generator_function):
 
 # Function to decide the model based on some logic
 def decide_model(conversation_history):
-    # # Example logic to choose the model
-    # if len(conversation_history) > 5:
-    #     return "llama3.1:8b"  # Some large model for long conversations
-    # else:
-    #     return "gemma2:2b"  # Some small model for short conversations
+    # For simplicity, we return a fixed model
     return "llama3.1:8b"  # Large model for heavy lifting (e.g., document parsing)
-    #return "gemma2:27b" 
 
 # Chatbot endpoint for handling messages and file content
 @app.route('/api/chat', methods=['POST'])
+@jwt_required()
 def chat():
     try:
         logging.info("Received chat request.")
@@ -142,13 +143,17 @@ def chat():
         model = decide_model(messages)
         logging.info(f"Model selected: {model}")
 
+        # Retrieve employee_id from JWT claims
+        jwt_data = get_jwt()
+        employee_id = jwt_data.get('employee_id')
+
         payload = {
             'model': model,
             'messages': messages,
+            'employee_id': employee_id,  # Pass employee_id
             'options': {
                 "temperature": 0.8,
-                "num_predict": -1,                
-                #"num_ctx":8192,
+                "num_predict": -1,
             },
             'stream': True,
             'keep_alive': 0
@@ -175,6 +180,13 @@ def signup():
         email = data.get('email')
         password = data.get('password')
 
+        # Generate sequential employee_id
+        last_employee = users.find_one({}, sort=[("employee_id", -1)])
+        if last_employee and 'employee_id' in last_employee:
+            employee_id = last_employee['employee_id'] + 1
+        else:
+            employee_id = 1  # Start from 1 if no users exist
+
         # Hash the password
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
@@ -185,13 +197,25 @@ def signup():
         # Generate TOTP secret
         totp_secret = pyotp.random_base32()
 
-        # Save the user to MongoDB with the TOTP secret
+        # Save the user to MongoDB with the TOTP secret and employee_id
         users.insert_one({
             "email": email,
             "password": hashed_password,
+            "employee_id": employee_id,  # Store employee_id
             "two_factor_enabled": True,
             "two_factor_secret": totp_secret
         })
+
+        # Add a sample entry to Employee_Dashboard for the new employee
+        sample_employee = {
+            "employee_id": employee_id,
+            "name": f"Employee {employee_id}",
+            "department": "IT",
+            "job_title": "Software Engineer",
+            "salary": 75000.00,
+            "leaves_taken_this_month": 2
+        }
+        employees.insert_one(sample_employee)
 
         # Generate TOTP URI and QR code
         totp = pyotp.TOTP(totp_secret)
@@ -207,12 +231,12 @@ def signup():
 
         return jsonify({
             "msg": "User registered successfully.",
+            "employee_id": employee_id,
             "qrcode": qrcode_base64  # Correct base64-encoded QR code string
         }), 201
-        
+
     except Exception as e:
         return jsonify({"msg": "Signup failed", "error": str(e)}), 500
-
 
 # Login Route - TOTP is mandatory for all users
 @app.route('/api/auth/login', methods=['POST'])
@@ -243,8 +267,12 @@ def login():
             logging.info(f"Login failed: Invalid TOTP token for email {email}.")
             return jsonify({'msg': 'Invalid 2FA token'}), 400
 
-        # Create JWT token after successful login
-        access_token = create_access_token(identity=email)
+        # Retrieve employee_id
+        employee_id = user.get('employee_id')
+
+        # Create JWT token with employee_id as additional data
+        additional_claims = {"employee_id": employee_id}
+        access_token = create_access_token(identity=email, additional_claims=additional_claims)
         logging.info(f"Login successful for email {email}. JWT token generated.")
 
         return jsonify({'token': access_token}), 200
@@ -263,7 +291,7 @@ def profile():
 
 # Function to clean up the upload folder when the server stops
 def cleanup_upload_folder():
-    if os.path.exists(app.config['UPLOAD_FOLDER']):        
+    if os.path.exists(app.config['UPLOAD_FOLDER']):
         # List all files and directories in the upload folder
         for filename in os.listdir(app.config['UPLOAD_FOLDER']):
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
@@ -281,7 +309,6 @@ def cleanup_upload_folder():
         print("Upload folder cleaned up, 'Test1.txt' preserved.")
     else:
         print("Upload folder does not exist.")
-        
 
 atexit.register(cleanup_upload_folder)
 
