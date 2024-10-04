@@ -45,6 +45,10 @@ loginLink.onclick = () => {
  */
 const loginForm = document.getElementById('login-form');
 
+const emailInput = document.getElementById('email');
+const passwordInput = document.getElementById('password');
+const totpInput = document.getElementById('totp');
+
 /**
  * Event handler for the login form submission.
  * Prevents the default form submission, collects user input, sends a POST request to the login API,
