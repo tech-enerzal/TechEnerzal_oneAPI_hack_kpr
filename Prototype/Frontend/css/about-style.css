@@ -1,0 +1,84 @@
+html, body {
+    height: 100%;
+    margin: 0;
+    font-family: Arial, sans-serif;
+}
+
+/* Navbar styling */
+.navbar {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand {
+    font-size: 1.5rem;
+}
+
+.navbar-nav .nav-link {
+    font-size: 1.1rem;
+    transition: color 0.3s ease;
+}
+
+.navbar-nav .nav-link:hover {
+    color: #dc3545; /* Red color on hover */
+}
+
+/* Footer styling */
+footer {
+    position: relative;
+    width: 100%;
+    background-color: white;
+    text-align: center;
+    padding: 1rem 0;
+}
+
+main {
+    background-color: #ffeef1; /* Light pink background */
+    padding: 30px 15px;
+}
+
+h1, h2 {
+    color: #343a40;
+    font-weight: 600;
+}
+
+.card {
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+}
+
+.card-title {
+    color: #dc3545;
+    font-size: 1.5rem;
+    margin-bottom: 15px;
+}
+
+.card-text {
+    color: #555;
+}
+
+.carousel-item img {
+    height: 400px;
+    object-fit: cover;
+}
+
+.carousel-caption h5 {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+footer {
+    background-color: #f8f9fa;
+    border-top: 1px solid #ddd;
+}
+
+footer p {
+    margin: 0;
+    color: #6c757d;
+}
