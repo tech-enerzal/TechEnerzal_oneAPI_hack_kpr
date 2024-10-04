@@ -4,6 +4,9 @@ import json  # For handling JSON data
 import os  # For file system operations
 from datetime import datetime  # For working with dates
 from neo4j import GraphDatabase  # For Neo4j integration
+import numpy as np
+from sklearnex import patch_sklearn, config_context
+patch_sklearn()
 
 # Neo4j connection class using 'with' statement and 'verify_connectivity()'
 class SocialGraphDB:
@@ -36,19 +39,37 @@ class SocialGraphDB:
                img_url=event_data['img_url'], event_url=event_data['event_url'])
 
 # Scrape the events from HTML file
+import os
+
+# Scrape the events from HTML file
 def scrape_events(html_file):
     try:
-        print(f"Trying to load HTML file from: {html_file}")
+        # Get the current script path (where the script is being run)
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        # Define the start of the relative path folder (up until "Prototype")
+        relative_start_folder = "Prototype"
+        
+        # Find the base path up until the "Prototype" directory dynamically
+        base_path = script_dir.split(relative_start_folder)[0] + relative_start_folder
+
+        # Join the base path with the relative path to the HTML file
+        html_file_path = os.path.join(base_path, html_file)
+
+        print(f"Trying to load HTML file from: {html_file_path}")
+        
         # Check if the HTML file exists
-        if not os.path.exists(html_file):
-            print(f"HTML file not found: {html_file}")
+        if not os.path.exists(html_file_path):
+            print(f"HTML file not found: {html_file_path}")
             return []
 
-        with open(html_file, 'r', encoding='utf-8') as file:
+        # Read the HTML file content
+        with open(html_file_path, 'r', encoding='utf-8') as file:
             content = file.read()
 
-        print(f"HTML content loaded from {html_file}")
+        print(f"HTML content loaded from {html_file_path}")
 
+        # Parse the HTML using BeautifulSoup
         soup = BeautifulSoup(content, 'html.parser')
 
         # List to store event data
@@ -143,7 +164,7 @@ def add_to_graph_database(events):
 
 # This function will combine the scraping, saving to JSON, and adding to Neo4j steps
 def run_scraping_and_saving():
-    html_file = "C:/Users/Aadil Rayeen/Desktop/KPR-Hacks/TechEnerzal_oneAPI_hack_kpr/Prototype/Frontend/pages/events.html"
+    html_file = "Frontend\pages\events.html"
 
     # Step 1: Scrape the events
     events = scrape_events(html_file)
