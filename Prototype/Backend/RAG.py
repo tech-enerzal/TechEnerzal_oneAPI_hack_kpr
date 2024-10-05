@@ -200,8 +200,20 @@ def generate_stream(payload):
                         "function": func
                     } for func in available_functions
                 ]
+                api_payload = {
+                    'model': model,
+                    'messages': messages,
+                    'stream': False,
+                    'tools': tools_payload,
+                    'keep_alive': 0
+                }
             else:
-                tools_payload = []
+                api_payload = {
+                    'model': model,
+                    'messages': messages,
+                    'stream': False,
+                    'keep_alive': 0
+                }
 
             # Prepare payload for the model API call
             model_api_url = 'http://localhost:11434/api/chat'  # Replace with your actual model API endpoint
