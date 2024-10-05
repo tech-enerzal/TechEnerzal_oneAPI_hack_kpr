@@ -1,53 +1,79 @@
-# RAG.py
+"""
+@fileoverview
+This module implements the Retrieval-Augmented Generation (RAG) functionality for the Business Sector Chatbot.
+It leverages FAISS for vector similarity search, SentenceTransformer for embeddings, and FlashRank for re-ranking.
+The module processes user queries, determines the necessity of database access, retrieves relevant documents,
+and streams the generated response back to the client.
+
+@version 1.0
+"""
+
 import re
 import json
 import logging
 import warnings
 import requests
 
-# FAISS imports
+# FAISS imports for vector similarity search
 from langchain_community.embeddings import SentenceTransformerEmbeddings
 from langchain_community.vectorstores import FAISS
 
-# Ranker (assuming you have a Ranker class)
+# Ranker import for re-ranking search results
 from flashrank import Ranker, RerankRequest
 
-# Suppress warnings
+# Suppress any warnings to keep the logs clean
 warnings.filterwarnings("ignore")
 
-# Initialize logging
+# Initialize logging with INFO level and a specific format
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Initialize embedding function
+# Initialize embedding function using SentenceTransformer
 logging.debug("Initializing embedding function...")
 embedding_function = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
 logging.info("Embedding function initialized.")
 
-# Load FAISS vector stores
+# Load FAISS vector stores for full HR dataset and QA HR dataset
 logging.debug("Loading FAISS vector stores...")
 faiss_Full_HR = FAISS.load_local("Prototype/Backend/Database/HR/Vector/Full_HR", embedding_function, allow_dangerous_deserialization=True)
 faiss_QA_HR = FAISS.load_local("Prototype/Backend/Database/HR/Vector/QA_HR", embedding_function, allow_dangerous_deserialization=True)
 logging.info("FAISS vector stores loaded.")
 
-# Initialize the ranker
+# Initialize the ranker for re-ranking search results
 logging.debug("Initializing the ranker...")
 ranker = Ranker(model_name="rank-T5-flan", cache_dir="/Temp")
 logging.info("Ranker initialized.")
 
 
 def generate_stream(payload):
+    """
+    Generates a streaming response based on the provided payload using Retrieval-Augmented Generation (RAG).
+
+    Args:
+        payload (dict): A dictionary containing the following keys:
+            - 'model' (str): Identifier for the model to use.
+            - 'messages' (list): List of message dictionaries containing 'role' and 'content'.
+            - 'options' (dict): Optional parameters such as 'temperature', 'num_predict', and 'num_ctx'.
+            - 'stream' (bool): Indicates whether to stream the response.
+            - 'keep_alive' (int): Determines if the connection should be kept alive.
+
+    Yields:
+        str: Streaming chunks of the generated response or error messages in JSON format.
+
+    Raises:
+        ValueError: If the 'messages' format in the payload is invalid.
+    """
     logging.info("Starting generate_stream...")
     # Extract model, messages, options from payload
     model = payload.get('model', 'default-model')
     messages = payload.get('messages', [])
     options = payload.get('options', {})
     temperature = options.get('temperature', 0.8)
-    max_tokens = options.get('num_predict',int(4096) )
-    context_length = options.get('num_ctx',int(8192) )
+    max_tokens = options.get('num_predict', int(4096))
+    context_length = options.get('num_ctx', int(8192))
     stream = payload.get('stream', True)
     logging.debug(f"Model: {model}, Temperature: {temperature}, Max Tokens: {max_tokens}, Stream: {stream}")
 
-    # Process messages to get user question and chat history
+    # Validate messages format
     if not messages or not isinstance(messages, list):
         logging.error("Invalid messages format in payload.")
         raise ValueError('Invalid messages format')
@@ -55,14 +81,14 @@ def generate_stream(payload):
     # Extract the user's latest message
     user_message = messages[-1].get('content', '')
     logging.debug(f"User message: {user_message}")
-    # Build chat history (excluding the last message)
+    # Build chat history excluding the last message
     chat_history = messages[:-1]
 
     try:
         # Step 1: Get user query (user_message already obtained)
         logging.info("Step 1: User query obtained.")
 
-        # Step 2: Have a self-query to determine if database is required
+        # Step 2: Perform a self-query to determine if database access is required
         logging.info("Step 2: Performing self-query to determine if database is required.")
         # Prepare the self-query prompt
         self_query_prompt = f"""
@@ -91,7 +117,7 @@ Answer in the following format:
 """
         logging.debug(f"Self-query prompt: {self_query_prompt}")
 
-        # Call the gemma2:2b model API
+        # Call the gemma2:2b model API for the self-query
         # Prepare payload for the self-query
         self_query_model_api_url = 'http://localhost:11434/api/chat'  # Replace with your actual gemma2:2b API endpoint
         self_query_model_payload = {
@@ -109,14 +135,14 @@ Answer in the following format:
         }
         logging.debug(f"Self-query model payload: {self_query_model_payload}")
 
-        # Make the API call
+        # Make the API call to the self-query model
         logging.info(f"Making self-query API call to {self_query_model_api_url}")
         self_query_response = requests.post(self_query_model_api_url, json=self_query_model_payload)
-        self_query_response.raise_for_status()
+        self_query_response.raise_for_status()  # Raise an exception for HTTP errors
         self_query_data = self_query_response.json()
         logging.debug(f"Self-query response data: {self_query_data}")
 
-        # Parse the response
+        # Parse the response to determine if database access is required
         if 'message' in self_query_data:
             message = self_query_data['message']
             if isinstance(message, dict):
@@ -136,8 +162,7 @@ Answer in the following format:
             raise ValueError(f'No message or messages key found in response: {self_query_data}')
         logging.debug(f"Assistant reply from self-query: {assistant_reply}")
 
-        # Expected format: "Database required: Yes" or "Database required: No"
-
+        # Extract the database requirement from the assistant's reply using regex
         match = re.search(r'Database required:\s*(Yes|No)', assistant_reply, re.IGNORECASE)
         if match:
             database_required = match.group(1).strip().lower() == 'yes'
@@ -146,6 +171,7 @@ Answer in the following format:
             logging.warning(f"Could not parse database requirement from assistant reply: {assistant_reply}")
             database_required = False  # Default to False if parsing fails
 
+        # Conditional logic based on whether the database is required
         # For now, keep the category and type determination commented out
         # If database is required, determine the type and category (to be implemented)
         # Example:
@@ -157,10 +183,9 @@ Answer in the following format:
         # Provide the answer in the following format:
         # "Database required: Yes; Type: HR; Category: Recruitment Policy"
         # """
-
         if database_required:
             logging.info("Database is required. Proceeding to search vector DB and generate response with context.")
-            # Proceed to search vector DB and generate response with context
+             # Proceed to search vector DB and generate response with context
 
             # Step 3: Query the full HR dataset (faiss_Full_HR)
             logging.info("Step 3: Querying the full HR dataset.")
@@ -174,11 +199,11 @@ Answer in the following format:
             section_names = [doc.metadata.get('section_name') for doc in top_sections]
             logging.debug(f"Top section names: {section_names}")
 
-            # Retrieve related FAQs from faiss_QA_HR
+            # Retrieve related FAQs from faiss_QA_HR based on the top sections
             qa_candidates = []
             for section_name in section_names:
                 logging.debug(f"Querying FAQs for section: {section_name}")
-                # Use the 'filter' parameter in FAISS similarity_search
+                # Use the 'filter' parameter in FAISS similarity_search to narrow down the search
                 k_qa = 10
                 qa_results = faiss_QA_HR.similarity_search(
                     user_message,
@@ -189,7 +214,7 @@ Answer in the following format:
                 logging.debug(f"Retrieved {len(qa_results)} FAQs for section {section_name}")
                 logging.debug(f"Retrieved {qa_results} FAQs for section {section_name}")
 
-            # Step 5: Select any related FAQ to user query
+            # Step 5: Re-rank the QA passages to select the most relevant FAQs
             logging.info("Step 5: Re-ranking the QA passages.")
             # Re-rank the QA passages
             qa_passages = [{
@@ -203,18 +228,20 @@ Answer in the following format:
             reranked_qa_results = ranker.rerank(rerank_request)
             logging.debug("Reranked QA results obtained.")
 
-            # Select top FAQs
+            # Select top FAQs after re-ranking
             top_faqs = reranked_qa_results[:3]
             logging.info(f"Selected top {len(top_faqs)} FAQs.")
 
-            # Step 6: Combine this and modify messages
+            # Step 6: Combine the retrieved sections and FAQs to prepare the context
             logging.info("Step 6: Preparing context and modifying messages.")
-            # Prepare context
+            # Prepare context from the top sections
             context_sections = '\n\n'.join([doc.page_content for doc in top_sections])
+            # Prepare context from the top FAQs
             context_faqs = '\n\n'.join([faq['text'] for faq in top_faqs])
 
-            # Removed FAQ Integration temperaily
+            # Currently, only sections are included in the context
             # context = f"Sections:\n{context_sections}\n\nFAQs:\n{context_faqs}"
+
             context = f"Sections:\n{context_sections}\n"
 
             logging.debug("Context prepared.")
@@ -228,9 +255,9 @@ Answer in the following format:
 
         else:
             logging.info("Database is not required. Proceeding without context.")
-            # No need to modify messages
+            # No need to modify messages if database access is not required
 
-        # Step 7: Call the model via API
+        # Step 7: Call the model via API to generate the final response
         logging.info("Step 7: Calling the model via API.")
         # Prepare payload for the model API
         model_api_url = 'http://localhost:11434/api/chat'  # Replace with your actual model API endpoint
@@ -240,18 +267,24 @@ Answer in the following format:
             'options': {
                 'temperature': temperature,
                 "num_predict": max_tokens,
-                "num_ctx":context_length,
+                "num_ctx": context_length,
             },
-            # 'stream': stream,
+            # 'stream': stream,  # Uncomment if streaming is required
             'keep_alive': 0
         }
         logging.debug(f"Model API payload prepared with messages.")
 
         # Function to stream the response from the model API
         def stream_model_response():
+            """
+            Streams the response from the model API by making a POST request and yielding response chunks.
+
+            Yields:
+                str: JSON-formatted response chunks or error messages.
+            """
             logging.debug(f"Making model API call to {model_api_url}")
             with requests.post(model_api_url, json=model_payload, stream=True) as response:
-                response.raise_for_status()
+                response.raise_for_status()  # Raise an exception for HTTP errors
                 logging.info("Model API call successful. Streaming response...")
                 for line in response.iter_lines():
                     if line:
@@ -274,17 +307,18 @@ Answer in the following format:
                                 logging.debug(f"Ignored message with role: {role}")
                         
                         except json.JSONDecodeError:
-                            # If the line is not valid JSON, log it
+                            # If the line is not valid JSON, log it and yield the raw line
                             logging.warning(f"Received non-JSON line: {decoded_line}")
                             yield decoded_line + '\n'
 
                         # Log the raw line received for additional visibility
                         logging.debug(f"Raw line received: {decoded_line}")
 
-        # Yield the response chunks
+        # Yield the response chunks to the caller
         for chunk in stream_model_response():
             yield chunk
 
     except Exception as e:
         logging.exception("Error in generate_stream")
         yield json.dumps({"error": f"Error in generating response: {str(e)}"})
+
