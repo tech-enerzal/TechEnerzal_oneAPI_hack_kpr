@@ -1,4 +1,4 @@
-# RAG.py
+# Updated Rag.py with hardcoded employee data retrieval
 import re
 import json
 import logging
@@ -34,6 +34,15 @@ logging.debug("Initializing the ranker...")
 ranker = Ranker(model_name="rank-T5-flan", cache_dir="/Temp")
 logging.info("Ranker initialized.")
 
+# Hardcoded employee data (since there's only one entry)
+sample_employee = {
+    "employee_id": 1,
+    "name": "John Doe",
+    "department": "IT",
+    "job_title": "Software Engineer",
+    "salary": 75000.00,
+    "leaves_taken_this_month": 2
+}
 
 def generate_stream(payload):
     logging.info("Starting generate_stream...")
@@ -42,9 +51,9 @@ def generate_stream(payload):
     messages = payload.get('messages', [])
     options = payload.get('options', {})
     temperature = options.get('temperature', 0.8)
-    max_tokens = options.get('num_predict',int(4096) )
-    context_length = options.get('num_ctx',int(8192) )
-    stream = payload.get('stream', True)
+    max_tokens = options.get('num_predict', int(4096))
+    context_length = options.get('num_ctx', int(8192))
+    stream = False  # Disable streaming when tool calling is involved
     logging.debug(f"Model: {model}, Temperature: {temperature}, Max Tokens: {max_tokens}, Stream: {stream}")
 
     # Process messages to get user question and chat history
@@ -62,200 +71,203 @@ def generate_stream(payload):
         # Step 1: Get user query (user_message already obtained)
         logging.info("Step 1: User query obtained.")
 
-        # Step 2: Have a self-query to determine if database is required
-        logging.info("Step 2: Performing self-query to determine if database is required.")
-        # Prepare the self-query prompt
-        self_query_prompt = f"""
-Given the following question:
+        # Step 2: Determine if the database is required using the 'determine_database_requirements' function
+        logging.info("Step 2: Determining if the database is required.")
+        determine_db_requirements_function = {
+            "name": "determine_database_requirements",
+            "description": "Determine if the user's query requires accessing the database and specify the categories of data needed.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "database_required": {
+                        "type": "boolean",
+                        "description": "Whether the database is required to answer the query."
+                    },
+                    "categories": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": ["personal_data", "hr_policy", "company_events"]
+                        },
+                        "description": "List of data categories required."
+                    }
+                },
+                "required": ["database_required"]
+            }
+        }
 
-"{user_message}"
-
-Context:
- You are Enerzal, a friendly and intelligent chatbot developed by Tech Enerzal. Your primary role is to assist employees of Tech Enerzal by providing helpful, polite, and accurate information. You should always maintain a friendly and approachable tone while ensuring your responses are clear and informative. Your purpose is to assist with the following:
-
-1. **HR-Related Queries:** Help employees with questions regarding company policies, leave management, employee benefits, payroll, and other HR-related topics. Be empathetic and supportive, especially for sensitive topics like leave or benefits.
-
-2. **IT Support:** Provide guidance on common IT issues employees may encounter, such as troubleshooting technical problems, resetting passwords, or navigating company software. Be patient and provide step-by-step instructions for resolving technical issues.
-
-3. **Company Events & Updates:** Keep employees informed about upcoming company events, milestones, and internal updates. Share details about events in a friendly, enthusiastic tone to keep the company culture vibrant and engaging.
-
-4. **Uploaded Document Summarization and Querying:** Enerzal also helps employees by summarizing documents (PDF, DOCX, TXT) and answering queries based on the content of uploaded documents. For document summaries, be concise and informative, extracting the key points while maintaining clarity. When answering queries, provide clear and accurate answers based on the document content, making sure to offer further assistance if needed.
-
-Determine whether the assistant needs to access an external database for only  HR , IT , Company events to provide an accurate answer. For Uploaded Document's and casual talks Default to NO 
-
-Answer with 'Yes' if the database is required, or 'No' if the database is not required.
-
-Answer in the following format:
-
-"Database required: Yes" or "Database required: No"
-"""
-        logging.debug(f"Self-query prompt: {self_query_prompt}")
-
-        # Call the gemma2:2b model API
-        # Prepare payload for the self-query
-        self_query_model_api_url = 'http://localhost:11434/api/chat'  # Replace with your actual gemma2:2b API endpoint
-        self_query_model_payload = {
-            'model': 'gemma2:2b',  # Specify the model
+        # Prepare payload for the function calling
+        function_call_payload = {
+            'model': 'gemma2:2b',
             'messages': [
-                {'role': 'system', 'content': 'You are an assistant that determines whether a database is required to answer a question.'},
-                {'role': 'user', 'content': self_query_prompt}
+                {'role': 'user', 'content': user_message}
             ],
-            'options': {
-                'temperature': 0.0,
-                "num_predict": int(15),
-            },
-            'stream': False,  # Self-query does not need streaming
+            'stream': False,
+            'tools': [
+                {
+                    "type": "function",
+                    "function": determine_db_requirements_function
+                }
+            ],
             'keep_alive': 0
         }
-        logging.debug(f"Self-query model payload: {self_query_model_payload}")
 
-        # Make the API call
-        logging.info(f"Making self-query API call to {self_query_model_api_url}")
-        self_query_response = requests.post(self_query_model_api_url, json=self_query_model_payload)
-        self_query_response.raise_for_status()
-        self_query_data = self_query_response.json()
-        logging.debug(f"Self-query response data: {self_query_data}")
+        logging.debug(f"Function call payload: {function_call_payload}")
 
-        # Parse the response
-        if 'message' in self_query_data:
-            message = self_query_data['message']
-            if isinstance(message, dict):
-                assistant_reply = message.get('content', '').strip()
-            else:
-                logging.error(f"Invalid message format in response: {message}")
-                raise ValueError(f'Invalid message format in response: {message}')
-        elif 'messages' in self_query_data:
-            messages = self_query_data['messages']
-            if messages and isinstance(messages, list):
-                assistant_reply = messages[-1].get('content', '').strip()
-            else:
-                logging.error(f"Invalid messages format in response: {messages}")
-                raise ValueError(f'Invalid messages format in response: {messages}')
+        # Make the API call to determine database requirements
+        function_api_url = 'http://localhost:11434/api/chat'
+        logging.info(f"Making API call to {function_api_url} to determine database requirements.")
+        function_response = requests.post(function_api_url, json=function_call_payload)
+        function_response.raise_for_status()
+        function_data = function_response.json()
+        logging.debug(f"Function response data: {function_data}")
+
+        # Check if functions are called
+        database_required = False
+        categories = []
+        if 'message' in function_data and 'tool_calls' in function_data['message']:
+            tool_calls = function_data['message']['tool_calls']
+            for tool_call in tool_calls:
+                if tool_call['function']['name'] == 'determine_database_requirements':
+                    args = tool_call['function']['arguments']
+                    database_required = args.get('database_required', False)
+                    categories = args.get('categories', [])
+                    logging.info(f"Database required: {database_required}, Categories: {categories}")
         else:
-            logging.error(f"No message or messages key found in response: {self_query_data}")
-            raise ValueError(f'No message or messages key found in response: {self_query_data}')
-        logging.debug(f"Assistant reply from self-query: {assistant_reply}")
-
-        # Expected format: "Database required: Yes" or "Database required: No"
-
-        match = re.search(r'Database required:\s*(Yes|No)', assistant_reply, re.IGNORECASE)
-        if match:
-            database_required = match.group(1).strip().lower() == 'yes'
-            logging.info(f"Database required: {database_required}")
-        else:
-            logging.warning(f"Could not parse database requirement from assistant reply: {assistant_reply}")
-            database_required = False  # Default to False if parsing fails
-
-        '''
-        Replaceable with function/tool calling 
-
-        determine_database_requirements = {
-    "name": "determine_database_requirements",
-    "description": "Determine if the user's query requires accessing the database and specify the categories of data needed.",
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "database_required": {
-                "type": "boolean",
-                "description": "Whether the database is required to answer the query."
-            },
-            "categories": {
-                "type": "array",
-                "items": {
-                    "type": "string",
-                    "enum": ["personal_data", "hr_policy", "company_events"]
-                },
-                "description": "List of data categories required."
-            }
-        },
-        "required": ["database_required"]
-    }
-}
-        '''
-
-        # For now, keep the category and type determination commented out
-        # If database is required, determine the type and category (to be implemented)
-        # Example:
-        # if database_required:
-        #     # Extend the self-query prompt to ask for type and category
-        #     self_query_prompt += """
-        # Also, specify which database type is required (currently only HR) and select the Section category from one of these for HR:
-        # (Recruitment Policy, Appointments and Promotions, Leave and Attendance, Performance Review, General Conduct, Ethics & Disciplinary Action, Medical Reimbursement and Facilities, Grievance Policy, Retirement and Resignation, Training & Development, Insurance Policies, Allowances & Benefits, Housing Policies)
-        # Provide the answer in the following format:
-        # "Database required: Yes; Type: HR; Category: Recruitment Policy"
-        # """
+            logging.warning("No tool calls found in the response.")
 
         if database_required:
-            logging.info("Database is required. Proceeding to search vector DB and generate response with context.")
-            # Proceed to search vector DB and generate response with context
+            logging.info("Database is required. Proceeding based on categories.")
+            if 'personal_data' in categories:
+                # Call 'get_employee_data' function
+                logging.info("Fetching personal employee data.")
+                get_employee_data_function = {
+                    "name": "get_employee_data",
+                    "description": "Fetch specific personal data fields of an employee from the database.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "fields": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "enum": ["employee_id", "name", "department", "job_title", "salary", "leaves_taken_this_month"]
+                                },
+                                "description": "List of employee data fields to retrieve."
+                            }
+                        },
+                        "required": ["fields"]
+                    }
+                }
 
-            # Step 3: Query the full HR dataset (faiss_Full_HR)
-            logging.info("Step 3: Querying the full HR dataset.")
-            k_full = 10  # Number of documents to retrieve
-            full_hr_candidates = faiss_Full_HR.similarity_search(user_message, k=k_full)
-            logging.debug(f"Retrieved {len(full_hr_candidates)} documents from full HR dataset.")
+                # Prepare payload for fetching employee data
+                employee_data_payload = {
+                    'model': model,
+                    'messages': messages,
+                    'stream': False,
+                    'tools': [
+                        {
+                            "type": "function",
+                            "function": get_employee_data_function
+                        }
+                    ],
+                    'keep_alive': 0
+                }
 
-            # Step 4: Query the QA of the top 2 selected Sections from Full HR
-            logging.info("Step 4: Querying the QA of the top 2 selected sections from Full HR.")
-            top_sections = full_hr_candidates[:2]
-            section_names = [doc.metadata.get('section_name') for doc in top_sections]
-            logging.debug(f"Top section names: {section_names}")
+                # Make the API call to get employee data
+                logging.info(f"Making API call to {function_api_url} to get employee data.")
+                employee_response = requests.post(function_api_url, json=employee_data_payload)
+                employee_response.raise_for_status()
+                employee_data = employee_response.json()
+                logging.debug(f"Employee data response: {employee_data}")
 
-            # Retrieve related FAQs from faiss_QA_HR
-            qa_candidates = []
-            for section_name in section_names:
-                logging.debug(f"Querying FAQs for section: {section_name}")
-                # Use the 'filter' parameter in FAISS similarity_search
-                k_qa = 10
-                qa_results = faiss_QA_HR.similarity_search(
-                    user_message,
-                    k=k_qa,
-                    filter={'section_name': section_name}
-                )
-                qa_candidates.extend(qa_results)
-                logging.debug(f"Retrieved {len(qa_results)} FAQs for section {section_name}")
-                logging.debug(f"Retrieved {qa_results} FAQs for section {section_name}")
+                # Process the employee data
+                if 'message' in employee_data and 'tool_calls' in employee_data['message']:
+                    tool_calls = employee_data['message']['tool_calls']
+                    for tool_call in tool_calls:
+                        if tool_call['function']['name'] == 'get_employee_data':
+                            args = tool_call['function']['arguments']
+                            fields = args.get('fields', [])
+                            # Fetch data from the hardcoded sample_employee
+                            employee_info = {field: sample_employee.get(field) for field in fields}
+                            logging.debug(f"Fetched employee info: {employee_info}")
+                            # Add the employee info to the messages
+                            messages.append({
+                                'role': 'system',
+                                'content': f"Employee Data: {employee_info}"
+                            })
+            if 'hr_policy' in categories:
+                # Call 'get_hr_policy' function
+                logging.info("Fetching HR policy information.")
+                get_hr_policy_function = {
+                    "name": "get_hr_policy",
+                    "description": "Fetch HR policy information by querying the vector database.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "User_Query": {
+                                "type": "string",
+                                "description": "The query related to HR policy that is to be similarity searched in HR dataset."
+                                }
+                        },
+                        "required": ["User_Query"]
+                    }
+                }
 
-            # Step 5: Select any related FAQ to user query
-            logging.info("Step 5: Re-ranking the QA passages.")
-            # Re-rank the QA passages
-            qa_passages = [{
-                'id': doc.metadata.get('ids', ''),
-                'text': doc.page_content,
-                'meta': doc.metadata
-            } for doc in qa_candidates]
-            logging.debug(f"Total QA passages for re-ranking: {len(qa_passages)}")
+                # Prepare payload for fetching HR policy
+                hr_policy_payload = {
+                    'model': model,
+                    'messages': messages,
+                    'stream': False,
+                    'tools': [
+                        {
+                            "type": "function",
+                            "function": get_hr_policy_function
+                        }
+                    ],
+                    'keep_alive': 0
+                }
 
-            rerank_request = RerankRequest(query=user_message, passages=qa_passages)
-            reranked_qa_results = ranker.rerank(rerank_request)
-            logging.debug("Reranked QA results obtained.")
+                # Make the API call to get HR policy
+                logging.info(f"Making API call to {function_api_url} to get HR policy.")
+                hr_policy_response = requests.post(function_api_url, json=hr_policy_payload)
+                hr_policy_response.raise_for_status()
+                hr_policy_data = hr_policy_response.json()
+                logging.debug(f"HR policy data response: {hr_policy_data}")
 
-            # Select top FAQs
-            top_faqs = reranked_qa_results[:3]
-            logging.info(f"Selected top {len(top_faqs)} FAQs.")
+                # Process the HR policy data
+                if 'message' in hr_policy_data and 'tool_calls' in hr_policy_data['message']:
+                    tool_calls = hr_policy_data['message']['tool_calls']
+                    for tool_call in tool_calls:
+                        if tool_call['function']['name'] == 'get_hr_policy':
+                            args = tool_call['function']['arguments']
+                            user_query = args.get('User_Query', '')
+                            # Query the vector database
+                            k_full = 10
+                            hr_candidates = faiss_Full_HR.similarity_search(user_query, k=k_full)
+                            logging.debug(f"Retrieved {len(hr_candidates)} HR policy documents.")
 
-            # Step 6: Combine this and modify messages
-            logging.info("Step 6: Preparing context and modifying messages.")
-            # Prepare context
-            context_sections = '\n\n'.join([doc.page_content for doc in top_sections])
-            context_faqs = '\n\n'.join([faq['text'] for faq in top_faqs])
+                            # Re-rank and select top policies
+                            hr_passages = [{
+                                'id': doc.metadata.get('ids', ''),
+                                'text': doc.page_content,
+                                'meta': doc.metadata
+                            } for doc in hr_candidates]
 
-            # Removed FAQ Integration temperaily
-            # context = f"Sections:\n{context_sections}\n\nFAQs:\n{context_faqs}"
-            context = f"Sections:\n{context_sections}\n"
+                            rerank_request = RerankRequest(query=user_query, passages=hr_passages)
+                            reranked_hr_results = ranker.rerank(rerank_request)
+                            logging.debug("Reranked HR policy results obtained.")
 
-            logging.debug("Context prepared.")
+                            # Select top HR policies
+                            top_policies = reranked_hr_results[:3]
+                            logging.info(f"Selected top {len(top_policies)} HR policies.")
 
-            # Insert system message with context before the last user message
-            messages.insert(-1, {
-                'role': 'system',
-                'content': f'Using the provided context from the database for Tech Enerzal to answer the user query.\nContext="{context}"'
-            })
-            logging.debug("Inserted system message with context into messages.")
-
-        else:
-            logging.info("Database is not required. Proceeding without context.")
-            # No need to modify messages
+                            # Prepare context and add to messages
+                            context_sections = '\n\n'.join([policy['text'] for policy in top_policies])
+                            messages.append({
+                                'role': 'system',
+                                'content': f'HR Policy Information:\n{context_sections}'
+                            })
 
         # Step 7: Call the model via API
         logging.info("Step 7: Calling the model via API.")
@@ -267,90 +279,47 @@ Answer in the following format:
             'options': {
                 'temperature': temperature,
                 "num_predict": max_tokens,
-                "num_ctx":context_length,
+                "num_ctx": context_length,
             },
-            # 'stream': stream,
+            'stream': False,  # Streaming is disabled when functions are involved
             'keep_alive': 0
         }
         logging.debug(f"Model API payload prepared with messages.")
 
-        '''
-        Replaceable with when function/tool calling 
-
-
-        get_employee_data = {
-    "name": "get_employee_data",
-    "description": "Fetch specific personal data fields of an employee from the MongoDB database.",
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "fields": {
-                "type": "array",
-                "items": {
-                    "type": "string",
-                    "enum": ["employee_id", "name", "department", "job_title", "salary", "leaves_taken_this_month"]
-                },
-                "description": "List of employee data fields to retrieve."
-            }
-        },
-        "required": ["fields"]
-    }
-}
-
-get_hr_policy = {
-    "name": "get_hr_policy",
-    "description": "Fetch HR policy information by querying the vector database.",
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "policy_name": {
-                "type": "string",
-                "description": "The name or topic of the HR policy to retrieve."
-            }
-        },
-        "required": ["policy_name"]
-    }
-}
-        '''
-
-        # Function to stream the response from the model API
-        def stream_model_response():
+        # Function to get the response from the model API
+        def get_model_response():
             logging.debug(f"Making model API call to {model_api_url}")
-            with requests.post(model_api_url, json=model_payload, stream=True) as response:
-                response.raise_for_status()
-                logging.info("Model API call successful. Streaming response...")
-                for line in response.iter_lines():
-                    if line:
-                        decoded_line = line.decode('utf-8')
-                        # Assuming the API returns JSON lines with 'message' containing 'role' and 'content'
-                        try:
-                            data = json.loads(decoded_line)
-                            logging.debug(f"Received JSON data: {data}")
-                    
-                            # Accessing nested 'message' object
-                            message = data.get('message', {})
-                            role = message.get('role')
-                            content = message.get('content', '')
+            response = requests.post(model_api_url, json=model_payload)
+            response.raise_for_status()
+            data = response.json()
+            logging.info("Model API call successful.")
+            logging.debug(f"Model response data: {data}")
+            return data
 
-                            # Only yield user and assistant messages
-                            if role in ['assistant', 'user']:
-                                yield content + '\n'
-                                logging.debug(f"Yielded content chunk: {content}")
-                            else:
-                                logging.debug(f"Ignored message with role: {role}")
-                        
-                        except json.JSONDecodeError:
-                            # If the line is not valid JSON, log it
-                            logging.warning(f"Received non-JSON line: {decoded_line}")
-                            yield decoded_line + '\n'
+        # Get the response
+        model_response = get_model_response()
 
-                        # Log the raw line received for additional visibility
-                        logging.debug(f"Raw line received: {decoded_line}")
-
-        # Yield the response chunks
-        for chunk in stream_model_response():
-            yield chunk
+        # Check for 'tools' field and handle accordingly
+        if 'message' in model_response:
+            message = model_response['message']
+            if 'tool_calls' in message:
+                logging.info("Functions were called in the response.")
+                # Process tool calls as per your application's logic
+                # Ensure intermediary setup is not displayed to the user
+                # Prepare the final assistant message without intermediary details
+                final_response = {
+                    'role': 'assistant',
+                    'content': message.get('content', '')
+                }
+                yield json.dumps(final_response)
+            else:
+                # No functions were called, simply return the assistant's reply
+                yield json.dumps(message)
+        else:
+            logging.error("Invalid response format from the model API.")
+            yield json.dumps({"error": "Invalid response from the model API."})
 
     except Exception as e:
         logging.exception("Error in generate_stream")
         yield json.dumps({"error": f"Error in generating response: {str(e)}"})
+
