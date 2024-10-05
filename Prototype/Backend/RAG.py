@@ -36,7 +36,7 @@ logging.debug("Initializing the ranker...")
 ranker = Ranker(model_name="rank-T5-flan", cache_dir="/Temp")
 logging.info("Ranker initialized.")
 
-# Hardcoded employee data (since there's only one entry)
+# Hardcoded employee data (since We can't put Secret api key in Public repo)
 sample_employee = {
     "employee_id": 1,
     "name": "John Doe",
