@@ -146,6 +146,33 @@ Answer in the following format:
             logging.warning(f"Could not parse database requirement from assistant reply: {assistant_reply}")
             database_required = False  # Default to False if parsing fails
 
+        '''
+        Replaceable with function/tool calling 
+
+        determine_database_requirements = {
+    "name": "determine_database_requirements",
+    "description": "Determine if the user's query requires accessing the database and specify the categories of data needed.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "database_required": {
+                "type": "boolean",
+                "description": "Whether the database is required to answer the query."
+            },
+            "categories": {
+                "type": "array",
+                "items": {
+                    "type": "string",
+                    "enum": ["personal_data", "hr_policy", "company_events"]
+                },
+                "description": "List of data categories required."
+            }
+        },
+        "required": ["database_required"]
+    }
+}
+        '''
+
         # For now, keep the category and type determination commented out
         # If database is required, determine the type and category (to be implemented)
         # Example:
@@ -246,6 +273,45 @@ Answer in the following format:
             'keep_alive': 0
         }
         logging.debug(f"Model API payload prepared with messages.")
+
+        '''
+        Replaceable with when function/tool calling 
+
+
+        get_employee_data = {
+    "name": "get_employee_data",
+    "description": "Fetch specific personal data fields of an employee from the MongoDB database.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "fields": {
+                "type": "array",
+                "items": {
+                    "type": "string",
+                    "enum": ["employee_id", "name", "department", "job_title", "salary", "leaves_taken_this_month"]
+                },
+                "description": "List of employee data fields to retrieve."
+            }
+        },
+        "required": ["fields"]
+    }
+}
+
+get_hr_policy = {
+    "name": "get_hr_policy",
+    "description": "Fetch HR policy information by querying the vector database.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "policy_name": {
+                "type": "string",
+                "description": "The name or topic of the HR policy to retrieve."
+            }
+        },
+        "required": ["policy_name"]
+    }
+}
+        '''
 
         # Function to stream the response from the model API
         def stream_model_response():
