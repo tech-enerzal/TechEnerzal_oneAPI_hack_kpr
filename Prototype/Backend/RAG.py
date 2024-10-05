@@ -245,7 +245,7 @@ def generate_stream(payload):
                         # Add formatted data as an assistant message
                         messages.append({
                             'role': 'system',
-                            'content': formatted_data
+                            'content': f"context :/n{formatted_data}"
                         })
                     elif function_name == 'get_hr_policy':
                         user_query = arguments.get('user_query', '')
