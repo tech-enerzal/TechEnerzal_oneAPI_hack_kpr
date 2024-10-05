@@ -2,7 +2,7 @@
  * @fileoverview Handles chat interface interactions, including sending messages,
  * managing conversation history, handling file uploads, and communicating with
  * the backend API.
- * @version 1.0
+ * @version 1.1
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -73,13 +73,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     Guidelines to follow for every response:
     - Always maintain a positive and friendly tone.
-    
     - Offer help proactively by suggesting next steps or additional resources.
     - Be concise but detailed enough to ensure the employee gets all the information they need.
     - When responding to questions or queries, prioritize clarity and accuracy.
     - If a question falls outside of your scope, politely guide the user to the appropriate department or suggest alternative ways they can find help.
     - Always be empathetic and understanding, especially when dealing with sensitive HR or IT issues.
-    
+
     Remember, your goal is to make every employee interaction positive and helpful, ensuring that they feel supported by Tech Enerzal.
     `
     // Use Markdown when generating responses
@@ -92,8 +91,8 @@ document.addEventListener('DOMContentLoaded', function() {
      */
     function pruneConversationHistory() {
         // Exclude the initial system message when pruning
-        if (conversationHistory.length > 4) { // 1 system message + last 3 entries
-            conversationHistory = [conversationHistory[0], ...conversationHistory.slice(-3)];
+        if (conversationHistory.length > 7) { // 1 system message + last 6 entries (3 interactions)
+            conversationHistory = [conversationHistory[0], ...conversationHistory.slice(-6)];
         }
     }
 
@@ -144,43 +143,27 @@ document.addEventListener('DOMContentLoaded', function() {
                     throw new Error(`HTTP error! Status: ${response.status}`);
                 }
 
+                // Parse the JSON response
+                const responseData = await response.json();
+
+                // Extract the assistant's message
+                let assistantMessage = '';
+
+                if (responseData.content) {
+                    assistantMessage = responseData.content;
+                } else if (responseData.error) {
+                    assistantMessage = `Error: ${responseData.error}`;
+                } else {
+                    assistantMessage = 'Sorry, I did not understand that.';
+                }
+
                 // Create assistant response bubble (empty initially)
                 const assistantBubble = document.createElement('div');
                 assistantBubble.className = 'chat-bubble chat-bubble-assistant shadow-sm';
                 chatBubbles.appendChild(assistantBubble);
 
-                // Read and process the streamed response
-                const reader = response.body.getReader();
-                let decoder = new TextDecoder();
-                let assistantMessage = '';
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break; // Stream finished
-
-                    // Decode the chunk
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n'); // Split on newline characters
-
-                    lines.forEach(line => {
-                        if (line) {
-                            // Append the line to the assistant message
-                            assistantMessage += line;
-
-                            // Use marked.js to convert Markdown to HTML
-                            const assistantMessageHTML = marked.parse(assistantMessage);
-
-                            // Update the assistant bubble with the parsed content
-                            assistantBubble.innerHTML = `<p>${assistantMessageHTML}</p>`;
-                        }
-                    });
-
-                    chatBubbles.scrollTop = chatBubbles.scrollHeight; // Scroll to bottom as content comes in
-                }
-
-                // Final conversion of the full assistant message once streaming is done
-                const finalAssistantMessageHTML = marked.parse(assistantMessage);
-                assistantBubble.innerHTML = `<p>${finalAssistantMessageHTML}</p>`;
+                // Use typing animation to display the assistant's message
+                await typeAssistantMessage(assistantBubble, assistantMessage);
 
                 // Add the assistant's message to the conversation history
                 conversationHistory.push({ role: "assistant", content: assistantMessage });
@@ -198,6 +181,35 @@ document.addEventListener('DOMContentLoaded', function() {
             input.disabled = false;
             chatBubbles.scrollTop = chatBubbles.scrollHeight; // Scroll to bottom
         }
+    }
+
+    /**
+     * Types out the assistant's message with a typing animation.
+     * @param {HTMLElement} element - The DOM element where the message will be displayed.
+     * @param {string} message - The message to type out.
+     */
+    async function typeAssistantMessage(element, message) {
+        const typingSpeed = 20; // Time in milliseconds between each character
+        let index = 0;
+        let displayedMessage = '';
+
+        return new Promise((resolve) => {
+            function typeCharacter() {
+                if (index < message.length) {
+                    displayedMessage += message.charAt(index);
+                    // Use marked.js to convert Markdown to HTML
+                    const assistantMessageHTML = marked.parse(displayedMessage);
+                    // Update the assistant bubble with the parsed content
+                    element.innerHTML = `<p>${assistantMessageHTML}</p>`;
+                    index++;
+                    chatBubbles.scrollTop = chatBubbles.scrollHeight; // Scroll to bottom
+                    setTimeout(typeCharacter, typingSpeed);
+                } else {
+                    resolve();
+                }
+            }
+            typeCharacter();
+        });
     }
 
     /**
@@ -227,13 +239,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Add the explanation and file name to the system prompt (this is for the model, not shown to the user)
                     const systemMessage = `
                         The user has uploaded a document named "${fileName}". The contents of this file should be considered to assist in generating responses.
-                        Here is the content of the file parse in text format:
+                        Here is the content of the file parsed in text format:
                         ${content}
                     `;
 
                     // Add this system message to the conversation history, but do not display it to the user
                     conversationHistory.push({ role: "system", content: systemMessage });
-                    console.log(conversationHistory)
+                    console.log(conversationHistory);
 
                     // Notify user that the file is uploaded successfully
                     const fileSuccessBubble = document.createElement('div');

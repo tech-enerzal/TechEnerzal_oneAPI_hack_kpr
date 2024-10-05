@@ -1,3 +1,5 @@
+# Updated Flask application with streaming removed
+
 """
 @fileoverview
 This Flask application serves as the backend for the Business Sector Chatbot. It handles user authentication (signup and login with TOTP),
@@ -8,7 +10,7 @@ and employs JWT for secure access. It also integrates logging for monitoring and
 """
 
 import base64
-from flask import Flask, request, Response, jsonify
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
 import os
@@ -144,25 +146,6 @@ def upload_file():
     logging.warning(f"File type '{file.filename.rsplit('.', 1)[1].lower()}' not allowed.")
     return jsonify({'error': 'File type not allowed'}), 400
 
-def stream_response(generator_function):
-    """
-    Streams the response from the chatbot API to the client.
-
-    Args:
-        generator_function (generator): A generator that yields response chunks.
-
-    Yields:
-        str: JSON-formatted response chunks.
-    """
-    try:
-        for response_chunk in generator_function:
-            yield response_chunk + '\n'
-            logging.debug(f"Streaming chunk: {response_chunk}")
-    except Exception as e:
-        error_message = json.dumps({"error": f"Failed to fetch the assistant response: {str(e)}"})
-        logging.exception("Error in stream_response")
-        yield error_message + '\n'
-
 def decide_model(conversation_history):
     """
     Decides which model to use based on the conversation history.
@@ -184,10 +167,10 @@ def decide_model(conversation_history):
 def chat():
     """
     Chatbot endpoint for handling messages and file content. It processes the incoming messages,
-    decides which model to use, and streams the response back to the client.
+    decides which model to use, and returns the response back to the client.
 
     Returns:
-        Response: Streaming JSON response containing the chatbot's reply or an error message.
+        Response: JSON response containing the chatbot's reply or an error message.
     """
     try:
         logging.info("Received chat request.")
@@ -206,28 +189,23 @@ def chat():
             'messages': messages,
             'options': {
                 "temperature": 0.8,
-                "num_predict": -1,                
-                #"num_ctx":8192,  # Uncomment and set if context length is needed
+                "num_predict": -1,
+                # "num_ctx":8192,  # Uncomment and set if context length is needed
             },
-            'stream': True,
+            'stream': False,
             'keep_alive': 0
         }
         logging.info("Payload prepared for RAG.generate_stream.")
 
-        def generate_response():
-            """
-            Generator function that yields response chunks from the RAG module.
+        # Get the response from the RAG module
+        response_generator = RAG.generate_stream(payload)
+        response_chunks = list(response_generator)
+        response_text = ''.join(response_chunks)
+        logging.info("Received response from RAG module.")
 
-            Yields:
-                str: Response chunks from the RAG module.
-            """
-            response_generator = RAG.generate_stream(payload)  # Call the RAG module's streaming function
-            for chunk in response_generator:
-                yield chunk  # Yield each chunk to the stream_response function
-
-        logging.info("Starting to stream response to frontend.")
-        # Stream the response back to the client with appropriate content type
-        return Response(stream_response(generate_response()), content_type='application/json')
+        # Parse the response text into JSON
+        response_data = json.loads(response_text)
+        return jsonify(response_data), 200
 
     except Exception as e:
         # Log the exception with stack trace and return an error response
@@ -287,7 +265,7 @@ def signup():
             "msg": "User registered successfully.",
             "qrcode": qrcode_base64  # Base64-encoded QR code string
         }), 201
-        
+
     except Exception as e:
         # Return an error response if signup fails
         logging.exception("Signup failed.")
@@ -364,7 +342,7 @@ def cleanup_upload_folder():
     Cleans up the upload folder by deleting all files and directories except 'Test1.txt' and 'Readme.md'
     when the server stops. This ensures that temporary files do not accumulate over time.
     """
-    if os.path.exists(app.config['UPLOAD_FOLDER']):        
+    if os.path.exists(app.config['UPLOAD_FOLDER']):
         # Iterate over all files and directories in the upload folder
         for filename in os.listdir(app.config['UPLOAD_FOLDER']):
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
