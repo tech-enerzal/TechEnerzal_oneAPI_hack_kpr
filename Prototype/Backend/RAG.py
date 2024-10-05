@@ -1,9 +1,11 @@
-# Updated Rag.py with proper API calls for 'determine_database_requirements'
+# Rag.py - Complete code with all changes and working code
+
 import re
 import json
 import logging
 import warnings
 import requests
+import ast
 
 # FAISS imports
 from langchain_community.embeddings import SentenceTransformerEmbeddings
@@ -44,14 +46,44 @@ sample_employee = {
     "leaves_taken_this_month": 2
 }
 
+# Define allowed fields for get_employee_data
+ALLOWED_FIELDS = ["employee_id", "name", "department", "job_title", "salary", "leaves_taken_this_month"]
+
+# Define field name mapping for normalization
+FIELD_NAME_MAPPING = {
+    'employeeid': 'employee_id',
+    'name': 'name',
+    'department': 'department',
+    'jobtitle': 'job_title',
+    'salary': 'salary',
+    'leavestakenthismonth': 'leaves_taken_this_month',
+    # Add more mappings as needed
+}
+
 def get_employee_data(fields):
     """
     Fetch specific personal data fields of an employee.
-    Since we have only one employee, return data from sample_employee.
+    Only allowed fields are returned. Fields not in the allowed list are ignored.
     """
     logging.debug(f"Fetching employee data for fields: {fields}")
-    employee_info = {field: sample_employee.get(field) for field in fields}
-    return employee_info
+    # Normalize and map fields
+    mapped_fields = []
+    invalid_fields = []
+    for field in fields:
+        normalized_field = field.replace('_', '').replace(' ', '').lower()
+        if normalized_field in FIELD_NAME_MAPPING:
+            mapped_field = FIELD_NAME_MAPPING[normalized_field]
+            mapped_fields.append(mapped_field)
+        else:
+            invalid_fields.append(field)
+    if invalid_fields:
+        logging.warning(f"Requested invalid fields: {invalid_fields}")
+    # Fetch data for valid fields
+    employee_info = {field: sample_employee.get(field) for field in mapped_fields}
+    return {
+        "employee_info": employee_info,
+        "invalid_fields": invalid_fields
+    }
 
 def get_hr_policy(user_query):
     """
@@ -91,7 +123,7 @@ def generate_stream(payload):
     temperature = options.get('temperature', 0.8)
     max_tokens = options.get('num_predict', int(4096))
     context_length = options.get('num_ctx', int(8192))
-    stream = False  # Disable streaming when tool calling is involved
+    stream = False  # Streaming is disabled
     logging.debug(f"Model: {model}, Temperature: {temperature}, Max Tokens: {max_tokens}, Stream: {stream}")
 
     # Process messages to get user question and chat history
@@ -109,28 +141,6 @@ def generate_stream(payload):
         # Define the available functions
         available_functions = [
             {
-                "name": "determine_database_requirements",
-                "description": "Determine if the user's query requires accessing the database and specify the categories of data needed.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "database_required": {
-                            "type": "boolean",
-                            "description": "Whether the database is required to answer the query."
-                        },
-                        "categories": {
-                            "type": "array",
-                            "items": {
-                                "type": "string",
-                                "enum": ["personal_data", "hr_policy", "company_events"]
-                            },
-                            "description": "List of data categories required."
-                        }
-                    },
-                    "required": ["database_required"]
-                }
-            },
-            {
                 "name": "get_employee_data",
                 "description": "Fetch specific personal data fields of an employee from the database.",
                 "parameters": {
@@ -140,9 +150,9 @@ def generate_stream(payload):
                             "type": "array",
                             "items": {
                                 "type": "string",
-                                "enum": ["employee_id", "name", "department", "job_title", "salary", "leaves_taken_this_month"]
+                                "enum": ALLOWED_FIELDS
                             },
-                            "description": "List of employee data fields to retrieve."
+                            "description": "List of employee data fields to retrieve. Allowed fields are: employee_id, name, department, job_title, salary, leaves_taken_this_month."
                         }
                     },
                     "required": ["fields"]
@@ -164,34 +174,40 @@ def generate_stream(payload):
             }
         ]
 
-        # Step 1: Initial API call with functions
-        logging.info("Step 1: Making initial API call with functions.")
+        # Initialize flag to include tools in the payload
+        include_tools = True
 
-        # Prepare payload for the initial model API call
-        model_api_url = 'http://localhost:11434/api/chat'  # Replace with your actual model API endpoint
-        initial_payload = {
-            'model': model,
-            'messages': messages,
-            'stream': False,
-            'tools': [
-                {
-                    "type": "function",
-                    "function": func
-                } for func in available_functions
-            ],
-            'keep_alive': 0
-        }
-        logging.debug(f"Initial API payload: {initial_payload}")
-
-        # Make the initial API call
-        logging.info(f"Making initial API call to {model_api_url}")
-        initial_response = requests.post(model_api_url, json=initial_payload)
-        initial_response.raise_for_status()
-        response_data = initial_response.json()
-        logging.debug(f"Initial response data: {response_data}")
-
-        # Check if the model wants to call a function
         while True:
+            if include_tools:
+                tools_payload = [
+                    {
+                        "type": "function",
+                        "function": func
+                    } for func in available_functions
+                ]
+            else:
+                tools_payload = []
+
+            # Prepare payload for the model API call
+            model_api_url = 'http://localhost:11434/api/chat'  # Replace with your actual model API endpoint
+            api_payload = {
+                'model': model,
+                'messages': messages,
+                'stream': False,
+                'tools': tools_payload,
+                'keep_alive': 0
+            }
+            logging.info(f"API payload: {json.dumps(api_payload)}")
+
+            # Make the API call
+            logging.info(f"Making API call to {model_api_url}")
+            response = requests.post(model_api_url, json=api_payload)
+            logging.info(f"API response status: {response.status_code}")
+            response.raise_for_status()
+            response_data = response.json()
+            logging.info(f"API response data: {json.dumps(response_data)}")
+
+            # Check if the model wants to call a function
             if 'message' in response_data and 'tool_calls' in response_data['message']:
                 tool_calls = response_data['message']['tool_calls']
                 for tool_call in tool_calls:
@@ -201,58 +217,65 @@ def generate_stream(payload):
 
                     # Execute the corresponding function
                     if function_name == 'get_employee_data':
-                        function_result = get_employee_data(arguments.get('fields', []))
+                        requested_fields = arguments.get('fields', [])
+                        if isinstance(requested_fields, str):
+                            try:
+                                requested_fields = ast.literal_eval(requested_fields)
+                            except Exception as e:
+                                logging.error(f"Failed to parse requested_fields: {requested_fields}. Error: {str(e)}")
+                                requested_fields = []
+                        function_result = get_employee_data(requested_fields)
+                        # Prepare an assistant message with the function result
+                        employee_info = function_result.get('employee_info', {})
+                        invalid_fields = function_result.get('invalid_fields', [])
+                        context_message = "Employee Data:\n"
+                        for field, value in employee_info.items():
+                            context_message += f"{field}: {value}\n"
+                        if invalid_fields:
+                            context_message += f"\nNote: The following requested fields are not available or invalid and were ignored: {', '.join(invalid_fields)}"
+
+                        # Add context as an assistant message
+                        messages.append({
+                            'role': 'assistant',
+                            'content': context_message
+                        })
                     elif function_name == 'get_hr_policy':
-                        function_result = get_hr_policy(arguments.get('user_query', ''))
+                        user_query = arguments.get('user_query', '')
+                        function_result = get_hr_policy(user_query)
+                        # Add policy text as an assistant message
+                        messages.append({
+                            'role': 'assistant',
+                            'content': f"HR Policy Information:\n{function_result}"
+                        })
                     else:
-                        # For 'determine_database_requirements', since we don't have an implementation, we can simulate a response or handle it appropriately
-                        logging.error(f"Function {function_name} is not implemented on the backend.")
-                        function_result = {"error": f"Function {function_name} is not implemented."}
+                        logging.error(f"Unknown function requested: {function_name}")
+                        error_message = f"Error: Function {function_name} not found."
+                        messages.append({
+                            'role': 'assistant',
+                            'content': error_message
+                        })
 
-                    logging.debug(f"Function {function_name} returned: {function_result}")
+                    logging.info(f"Function {function_name} executed and assistant message added.")
 
-                    # Add the function result to the messages
-                    messages.append({
-                        'role': 'function',
-                        'name': function_name,
-                        'content': json.dumps(function_result)
-                    })
-
-                    # Make another API call to the model with the updated messages
-                    logging.info("Making subsequent API call with function result.")
-                    subsequent_payload = {
-                        'model': model,
-                        'messages': messages,
-                        'stream': False,
-                        'tools': [
-                            {
-                                "type": "function",
-                                "function": func
-                            } for func in available_functions
-                        ],
-                        'keep_alive': 0
-                    }
-                    logging.debug(f"Subsequent API payload: {subsequent_payload}")
-
-                    subsequent_response = requests.post(model_api_url, json=subsequent_payload)
-                    subsequent_response.raise_for_status()
-                    response_data = subsequent_response.json()
-                    logging.debug(f"Subsequent response data: {response_data}")
-
-                    # Check if the model wants to call another function
-                    continue
-
+                # After processing function calls, set include_tools to False to prevent further tool calls
+                include_tools = False
+                continue  # Continue the loop to make the next API call without tools
             else:
                 # No function call needed, send the assistant's reply directly
                 if 'message' in response_data:
                     message = response_data['message']
-                    yield json.dumps(message)
+                    # Ensure content is not empty
+                    if message.get('content'):
+                        yield json.dumps(message)
+                    else:
+                        # If content is empty, possibly the model did not generate a response
+                        logging.warning("Assistant's response content is empty.")
+                        yield json.dumps({"error": "Assistant did not generate any content."})
                 else:
                     logging.error("Invalid response format from the model API.")
                     yield json.dumps({"error": "Invalid response from the model API."})
-                break
+                break  # Exit the loop as no further processing is needed
 
     except Exception as e:
         logging.exception("Error in generate_stream")
         yield json.dumps({"error": f"Error in generating response: {str(e)}"})
-
