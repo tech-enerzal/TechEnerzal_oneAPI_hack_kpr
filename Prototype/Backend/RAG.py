@@ -106,7 +106,7 @@ def get_hr_policy(user_query):
     logging.debug("Reranked HR policy results obtained.")
 
     # Select top HR policies
-    top_policies = reranked_hr_results[:3]
+    top_policies = reranked_hr_results[:2]
     logging.info(f"Selected top {len(top_policies)} HR policies.")
 
     # Prepare the combined policy text
