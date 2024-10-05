@@ -94,6 +94,7 @@ def get_hr_policy(user_query):
     hr_candidates = faiss_Full_HR.similarity_search(user_query, k=k_full)
     logging.debug(f"Retrieved {len(hr_candidates)} HR policy documents.")
 
+
     # Re-rank and select top policies
     hr_passages = [{
         'id': doc.metadata.get('ids', ''),
@@ -106,7 +107,7 @@ def get_hr_policy(user_query):
     logging.debug("Reranked HR policy results obtained.")
 
     # Select top HR policies
-    top_policies = reranked_hr_results[:2]
+    top_policies = reranked_hr_results[:1]
     logging.info(f"Selected top {len(top_policies)} HR policies.")
 
     # Prepare the combined policy text
