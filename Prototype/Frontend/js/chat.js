@@ -77,9 +77,6 @@ document.addEventListener('DOMContentLoaded', function() {
     - Be concise but detailed enough to ensure the employee gets all the information they need.
     - When responding to questions or queries, prioritize clarity and accuracy.
     - If a question falls outside of your scope, politely guide the user to the appropriate department or suggest alternative ways they can find help.
-    - Always be empathetic and understanding, especially when dealing with sensitive HR or IT issues.
-
-    Remember, your goal is to make every employee interaction positive and helpful, ensuring that they feel supported by Tech Enerzal.
     `
     // Use Markdown when generating responses
 
