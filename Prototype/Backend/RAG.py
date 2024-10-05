@@ -244,7 +244,7 @@ def generate_stream(payload):
                         formatted_data = format_employee_data(function_result.get('employee_info', {}), function_result.get('invalid_fields', []))
                         # Add formatted data as an assistant message
                         messages.append({
-                            'role': 'system',
+                            'role': 'assistant',
                             'content': f"context :/n{formatted_data}"
                         })
                     elif function_name == 'get_hr_policy':
@@ -252,7 +252,7 @@ def generate_stream(payload):
                         function_result = get_hr_policy(user_query)
                         # Add policy text as an assistant message
                         messages.append({
-                            'role': 'system',
+                            'role': 'assistant',
                             'content': f"context :/n{function_result}"
                         })
                     else:
