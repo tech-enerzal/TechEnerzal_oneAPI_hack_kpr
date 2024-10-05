@@ -94,7 +94,6 @@ def get_hr_policy(user_query):
     hr_candidates = faiss_Full_HR.similarity_search(user_query, k=k_full)
     logging.debug(f"Retrieved {len(hr_candidates)} HR policy documents.")
 
-
     # Re-rank and select top policies
     hr_passages = [{
         'id': doc.metadata.get('ids', ''),
@@ -107,13 +106,28 @@ def get_hr_policy(user_query):
     logging.debug("Reranked HR policy results obtained.")
 
     # Select top HR policies
-    top_policies = reranked_hr_results[:1]
+    top_policies = reranked_hr_results[:3]
     logging.info(f"Selected top {len(top_policies)} HR policies.")
 
     # Prepare the combined policy text
     policy_text = '\n\n'.join([policy['text'] for policy in top_policies])
 
     return policy_text
+
+def format_employee_data(employee_info, invalid_fields):
+    """
+    Format employee data into natural language sentences.
+    """
+    sentences = []
+    if employee_info:
+        sentences.append("Here is the information you requested:")
+        for field, value in employee_info.items():
+            # Capitalize field names and replace underscores with spaces
+            field_name = field.replace('_', ' ').capitalize()
+            sentences.append(f"{field_name}: {value}")
+    if invalid_fields:
+        sentences.append(f"Note: The following requested fields are not available or invalid and were ignored: {', '.join(invalid_fields)}.")
+    return ' '.join(sentences)
 
 def generate_stream(payload):
     logging.info("Starting generate_stream...")
@@ -226,33 +240,26 @@ def generate_stream(payload):
                                 logging.error(f"Failed to parse requested_fields: {requested_fields}. Error: {str(e)}")
                                 requested_fields = []
                         function_result = get_employee_data(requested_fields)
-                        # Prepare an assistant message with the function result
-                        employee_info = function_result.get('employee_info', {})
-                        invalid_fields = function_result.get('invalid_fields', [])
-                        context_message = "Employee Data:\n"
-                        for field, value in employee_info.items():
-                            context_message += f"{field}: {value}\n"
-                        if invalid_fields:
-                            context_message += f"\nNote: The following requested fields are not available or invalid and were ignored: {', '.join(invalid_fields)}"
-
-                        # Add context as an assistant message
+                        # Format the function result into natural language
+                        formatted_data = format_employee_data(function_result.get('employee_info', {}), function_result.get('invalid_fields', []))
+                        # Add formatted data as an assistant message
                         messages.append({
-                            'role': 'assistant',
-                            'content': context_message
+                            'role': 'system',
+                            'content': formatted_data
                         })
                     elif function_name == 'get_hr_policy':
                         user_query = arguments.get('user_query', '')
                         function_result = get_hr_policy(user_query)
                         # Add policy text as an assistant message
                         messages.append({
-                            'role': 'assistant',
-                            'content': f"HR Policy Information:\n{function_result}"
+                            'role': 'system',
+                            'content': f"context :/n{function_result}"
                         })
                     else:
                         logging.error(f"Unknown function requested: {function_name}")
                         error_message = f"Error: Function {function_name} not found."
                         messages.append({
-                            'role': 'assistant',
+                            'role': 'system',
                             'content': error_message
                         })
 
@@ -276,6 +283,7 @@ def generate_stream(payload):
                     logging.error("Invalid response format from the model API.")
                     yield json.dumps({"error": "Invalid response from the model API."})
                 break  # Exit the loop as no further processing is needed
+
 
     except Exception as e:
         logging.exception("Error in generate_stream")
