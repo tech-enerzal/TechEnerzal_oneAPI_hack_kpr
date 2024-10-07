@@ -1,7 +1,6 @@
 # **Tech Enerzal Frontend**  
 
-Here’s a detailed **README.md** specifically for the **Frontend** portion of your project, based on the files and structure you've provided. This README will guide anyone through setting up and understanding the frontend of **Enerzal**:
-
+Here’s a detailed **README.md** specifically for the **Frontend** portion of your project. 
 ---
 
 ## **Overview**
