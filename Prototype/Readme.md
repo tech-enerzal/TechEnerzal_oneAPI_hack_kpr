@@ -1,6 +1,5 @@
 # **Tech Enerzal Frontend**  
 
-Here’s a detailed **README.md** specifically for the **Frontend** portion of your project. 
 ---
 
 ## **Overview**
